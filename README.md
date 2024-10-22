@@ -1,4 +1,7 @@
 # back meduzzen intership
 
-    1.Start the project using the command:
+    1.Іnstall requirements
+    pip install -r requirements.txt
+
+    2.Start the project using the command:
     python manage.py runserver
