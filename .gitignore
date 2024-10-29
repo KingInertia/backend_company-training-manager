@@ -25,6 +25,7 @@ media
 # Environments 
 .env
 venv/
+.env.docker
 
 my.txt
 
