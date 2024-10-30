@@ -1,0 +1,9 @@
+services:
+  django_app:
+    build:
+      context: ./
+    ports:
+      - '8000:8000'
+  test:
+    build: ./
+    command: python manage.py test
