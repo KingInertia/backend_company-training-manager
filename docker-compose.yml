@@ -2,16 +2,21 @@ services:
   django_app:
     depends_on:
       - postgres-db
+      - redis
     build:
       context: ./
     ports:
       - '8000:8000'
     volumes:
       - .:/app
+    networks:
+      - my-network
 
   test:
     build: ./
     command: python manage.py test
+    networks:
+      - my-network
 
   postgres-db:
     image: postgres:latest
@@ -24,6 +29,8 @@ services:
       - '5432:5432'
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - my-network
 
   redis:
     image: redis:latest
@@ -31,7 +38,12 @@ services:
       - '6379:6379'
     volumes:
       - redis_data:/data
+    networks:
+      - my-network
 
 volumes:
   db_data:
   redis_data:
+
+networks:
+  my-network:
