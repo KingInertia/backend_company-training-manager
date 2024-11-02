@@ -90,7 +90,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": os.getenv("REDIS_BACKEND"),
-        "LOCATION": os.getenv("REDIS_LOCATION"),  
+        "LOCATION": os.getenv("REDIS_HOST"),  
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
