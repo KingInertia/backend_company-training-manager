@@ -13,3 +13,18 @@
 
     2.For tests using the command:
     docker-compose up test
+
+# database migrations
+
+    1.For create migrations
+    python manage.py make migrations
+
+    2.For applying migrations
+
+# database migrations within Docker
+
+    1.For create migrations
+    python manage.py make migrations
+
+    2.For applying migrations
+    docker-compose exec django_app python manage.py migrate
