@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'apps.health_check.apps.HealthCheckConfig',
+    'tools.apps.ToolsConfig',
 ]
 
 MIDDLEWARE = [
@@ -90,11 +91,32 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": os.getenv("REDIS_BACKEND"),
-        "LOCATION": os.getenv("REDIS_LOCATION"),  
+        "LOCATION": os.getenv("REDIS_HOST"),  
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     }
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+    },
 }
 
 # Password validation
