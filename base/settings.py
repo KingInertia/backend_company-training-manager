@@ -29,6 +29,10 @@ DEBUG = env.bool('DEBUG')
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS").split(",")
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+AUTH_USER_MODEL = 'users.User'
 
 # Application definition
 
@@ -39,8 +43,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'apps.health_check.apps.HealthCheckConfig',
     'tools.apps.ToolsConfig',
+    'rest_framework',
+    'apps.health_check.apps.HealthCheckConfig',
+    'apps.users.apps.UsersConfig',
 ]
 
 MIDDLEWARE = [
@@ -114,6 +120,11 @@ LOGGING = {
         "django": {
             "handlers": ["console"],
             "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
+            "propagate": False,
+        },
+        "user_change": {  
+            "handlers": ["console"],  
+            "level": "INFO",
             "propagate": False,
         },
     },
