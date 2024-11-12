@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'tools.apps.ToolsConfig',
     'rest_framework',
+    'rest_framework.authtoken',
+    'djoser',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
 ]
@@ -170,3 +172,34 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+}
+
+DJOSER = {
+    'PASSWORD_RESET_CONFIRM_URL': '#/password/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': '#/username/reset/confirm/{uid}/{token}',
+    'EMAIL': {
+        'FROM_EMAIL': env("DEFAULT_FROM_EMAIL"),
+        'SMTP_HOST': env("EMAIL_HOST"),
+        'SMTP_PORT': 587,
+        'SMTP_USER': env("EMAIL_HOST_USER"),
+        'SMTP_PASSWORD': env("EMAIL_HOST_PASSWORD"),
+        'USE_TLS': env.bool("EMAIL_USE_TLS"),
+    },
+    'SERIALIZERS': {
+        'user_create': 'apps.users.serializers.UserSerializer',  
+        'user_list': 'apps.users.serializers.UserListSerializer',  
+        },    
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = 587
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
