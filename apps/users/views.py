@@ -1,8 +1,9 @@
 from rest_framework import viewsets
 from rest_framework.pagination import PageNumberPagination
+
 from .models import User
-from .serializers import *
-from typing import Type
+from .serializers import UserListSerializer, UserSerializer
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-created_at')
