@@ -1,0 +1,112 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-11-19 21:21+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "This field is required."
+msgstr "This field is required."
+
+msgid "Enter a valid email address."
+msgstr "Enter a valid email address."
+
+msgid "User with this email already exists."
+msgstr "User with this email already exists."
+
+msgid "Unable to log in with provided credentials."
+msgstr "Unable to log in with provided credentials."
+
+msgid "Invalid token."
+msgstr "Invalid token."
+
+msgid "Invalid or expired token."
+msgstr "Invalid or expired token."
+
+msgid "Invalid user id."
+msgstr "Invalid user id."
+
+msgid "Invalid activation key."
+msgstr "Invalid activation key."
+
+msgid "Password is too weak."
+msgstr "Password is too weak."
+
+msgid "Passwords do not match."
+msgstr "Passwords do not match."
+
+msgid "Account is inactive."
+msgstr "Account is inactive."
+
+msgid "Ensure this value is less than or equal to %(limit_value)s."
+msgstr "Ensure this value is less than or equal to %(limit_value)s."
+
+msgid "Ensure this value is greater than or equal to %(limit_value)s."
+msgstr "Ensure this value is greater than or equal to %(limit_value)s."
+
+msgid "Enter a valid integer."
+msgstr "Enter a valid integer."
+
+msgid "Enter a valid URL."
+msgstr "Enter a valid URL."
+
+msgid "Enter a valid date."
+msgstr "Enter a valid date."
+
+msgid "Enter a valid time."
+msgstr "Enter a valid time."
+
+msgid "Enter a valid duration."
+msgstr "Enter a valid duration."
+
+msgid "No file was submitted."
+msgstr "No file was submitted."
+
+msgid "The submitted file is empty."
+msgstr "The submitted file is empty."
+
+msgid "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+msgstr "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+
+msgid "Email is already in use."
+msgstr "Email is already in use."
+
+msgid "The username is already in use."
+msgstr "The username is already in use."
+
+msgid "You do not have permission to perform this action."
+msgstr "You do not have permission to perform this action."
+
+msgid "Authentication credentials were not provided."
+msgstr "Authentication credentials were not provided."
+
+msgid "Invalid username or password."
+msgstr "Invalid username or password."
+
+msgid "Your account has been disabled."
+msgstr "Your account has been disabled."
+
+msgid "Password reset successful."
+msgstr "Password reset successful."
+
+msgid "Account activation successful."
+msgstr "Account activation successful."
+
+msgid "Password reset failed."
+msgstr "Password reset failed."
+
+msgid "Activation failed."
+msgstr "Activation failed."

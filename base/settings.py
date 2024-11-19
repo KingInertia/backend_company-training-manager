@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.locale.LocaleMiddleware', 
 ]
 
 ROOT_URLCONF = 'base.urls'
@@ -181,6 +182,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     ),
+     'EXCEPTION_HANDLER': 'base.custom_exception_handler.custom_exception_handler',
 }
 
 DJOSER = {
@@ -210,3 +212,13 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
 CORS_ALLOWED_ORIGINS = env('CORS_ALLOWED_ORIGINS').split(",")
 
+LANGUAGE_CODE = 'en'
+LANGUAGES = [
+    ('en', 'English'),
+    ('uk', 'Ukrainian'),
+]
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+USE_I18N = True
+USE_L10N = True 
