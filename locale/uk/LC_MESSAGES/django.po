@@ -1,0 +1,115 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2024-11-19 21:28+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n % 1 == 0 && n % 10 == 1 && n % 100 != "
+"11 ? 0 : n % 1 == 0 && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % "
+"100 > 14) ? 1 : n % 1 == 0 && (n % 10 ==0 || (n % 10 >=5 && n % 10 <=9) || "
+"(n % 100 >=11 && n % 100 <=14 )) ? 2: 3);\n"
+
+msgid "This field is required."
+msgstr "Це поле є обов'язковим."
+
+msgid "Enter a valid email address."
+msgstr "Введіть дійсну адресу електронної пошти."
+
+msgid "User with this email already exists."
+msgstr "Користувач із такою електронною поштою вже існує."
+
+msgid "Unable to log in with provided credentials."
+msgstr "Не вдалося увійти з наданими обліковими даними."
+
+msgid "Invalid token."
+msgstr "Недійсний токен."
+
+msgid "Invalid or expired token."
+msgstr "Недійсний або прострочений токен."
+
+msgid "Invalid user id."
+msgstr "Недійсний ідентифікатор користувача."
+
+msgid "Invalid activation key."
+msgstr "Недійсний ключ активації."
+
+msgid "Password is too weak."
+msgstr "Пароль занадто слабкий."
+
+msgid "Passwords do not match."
+msgstr "Паролі не збігаються."
+
+msgid "Account is inactive."
+msgstr "Обліковий запис не активовано."
+
+msgid "Ensure this value is less than or equal to %(limit_value)s."
+msgstr "Переконайтеся, що значення не більше ніж %(limit_value)s."
+
+msgid "Ensure this value is greater than or equal to %(limit_value)s."
+msgstr "Переконайтеся, що значення не менше ніж %(limit_value)s."
+
+msgid "Enter a valid integer."
+msgstr "Введіть дійсне ціле число."
+
+msgid "Enter a valid URL."
+msgstr "Введіть дійсний URL."
+
+msgid "Enter a valid date."
+msgstr "Введіть дійсну дату."
+
+msgid "Enter a valid time."
+msgstr "Введіть дійсний час."
+
+msgid "Enter a valid duration."
+msgstr "Введіть дійсну тривалість."
+
+msgid "No file was submitted."
+msgstr "Файл не було надіслано."
+
+msgid "The submitted file is empty."
+msgstr "Надісланий файл порожній."
+
+msgid "Upload a valid image. The file you uploaded was either not an image or a corrupted image."
+msgstr "Завантажте дійсне зображення. Надісланий файл не є зображенням або пошкоджений."
+
+msgid "Email is already in use."
+msgstr "Ця електронна пошта вже використовується."
+
+msgid "The username is already in use."
+msgstr "Це ім'я користувача вже використовується."
+
+msgid "You do not have permission to perform this action."
+msgstr "Ви не маєте дозволу виконувати цю дію."
+
+msgid "Authentication credentials were not provided."
+msgstr "Облікові дані аутентифікації не були надані."
+
+msgid "Invalid username or password."
+msgstr "Неправильне ім'я користувача або пароль."
+
+msgid "Your account has been disabled."
+msgstr "Ваш обліковий запис було відключено."
+
+msgid "Password reset successful."
+msgstr "Скидання пароля успішно виконано."
+
+msgid "Account activation successful."
+msgstr "Активація облікового запису успішно виконана."
+
+msgid "Password reset failed."
+msgstr "Не вдалося скинути пароль."
+
+msgid "Activation failed."
+msgstr "Не вдалося активувати обліковий запис."
