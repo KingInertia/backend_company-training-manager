@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
+    'apps.companies.apps.CompaniesConfig',
 ]
 
 MIDDLEWARE = [
@@ -198,6 +199,7 @@ DJOSER = {
     },
     'SERIALIZERS': {
         'user_detail': 'apps.users.serializers.UserSerializer',  
+        'current_user': 'apps.users.serializers.UserSerializer',  
         'user_list': 'apps.users.serializers.UserListSerializer',
         },    
 }
