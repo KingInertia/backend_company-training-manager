@@ -389,7 +389,6 @@ class CompanyRequestViewSetTests(APITestCase):
         # Try to cancel request as receiver
         url = f'/api/v1/requests/{self.request.pk}/cancelled/'
         response = self.client.patch(url)
-        print(response.status_code)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Verify request status remains unchanged
