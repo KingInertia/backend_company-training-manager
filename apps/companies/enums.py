@@ -1,21 +1,18 @@
-from enum import Enum
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
-class RequestState(Enum):
-    AWAITING_RESPONSE = 'awaiting_response'
-    ACCEPTED = 'accepted'
-    DECLINED = 'declined'
-    CANCELLED = 'cancelled'
+class RequestState(models.TextChoices):
+    PENDING = 'pending', 'Awaiting Response'
+    ACCEPTED = 'accepted', 'Accepted'
+    DECLINED = 'declined', 'Declined'
+    CANCELLED = 'cancelled', 'Cancelled'
 
-    @classmethod
-    def choices(cls):
-        return [(state.value, state.name) for state in cls]
     
-class Role(Enum):
-    OWNER = 'owner'
-    ADMIN = 'admin'
-    MEMBER = 'member'
-
-    @classmethod
-    def choices(cls):
-        return [(role.value, role.name) for role in cls]
+class Role(models.TextChoices):
+    OWNER = 'owner', _('Owner')
+    MEMBER = 'member', _('Member')
+    
+class Visibility(models.TextChoices):
+        HIDDEN = 'hidden', _('Hidden')
+        VISIBLE = 'visible', _('Visible')

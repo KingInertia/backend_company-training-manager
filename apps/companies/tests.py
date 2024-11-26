@@ -2,10 +2,11 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.companies.enums import RequestState
+from apps.companies.enums import RequestState, Visibility
 from apps.companies.models import Company, CompanyInvitation, CompanyMember, CompanyRequest
 
 User = get_user_model()
+
 
 class CompanyInvitationViewSetTests(APITestCase):
     
@@ -31,7 +32,7 @@ class CompanyInvitationViewSetTests(APITestCase):
             name="Test1", 
             description="Test description", 
             owner=self.owner,  
-            visibility="visible"  
+            visibility=Visibility.VISIBLE  
         )
         
         
@@ -39,15 +40,14 @@ class CompanyInvitationViewSetTests(APITestCase):
             company=self.company1,
             sender=self.owner,
             receiver=self.receiver1,
-            status=RequestState.AWAITING_RESPONSE.value
+            status=RequestState.PENDING
         )
         self.invitation2 = CompanyInvitation.objects.create(
             company=self.company1,
             sender=self.owner,
             receiver=self.receiver2,
-            status=RequestState.AWAITING_RESPONSE.value
+            status=RequestState.PENDING
         )
-        
         
     def test_accept_invitation_success(self): 
         # auth receiver1
@@ -60,18 +60,17 @@ class CompanyInvitationViewSetTests(APITestCase):
         
         # check invitation status
         self.invitation1.refresh_from_db()
-        assert self.invitation1.status == RequestState.ACCEPTED.value
+        assert self.invitation1.status == RequestState.ACCEPTED
         
         # check company member
         assert CompanyMember.objects.filter(user=self.receiver1, company=self.company1).exists()
-
 
     def test_accept_invitation_already_processed(self):
         # auth receiver1
         self.client.force_authenticate(user=self.receiver1)
         
         # update status to ACCEPTED
-        self.invitation1.status = RequestState.ACCEPTED.value
+        self.invitation1.status = RequestState.ACCEPTED
         self.invitation1.save()
 
         # invite1 accept again
@@ -79,7 +78,6 @@ class CompanyInvitationViewSetTests(APITestCase):
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         
-
     def test_accept_invitation_by_non_receiver(self):
         # auth owner 
         self.client.force_authenticate(user=self.owner)     
@@ -91,8 +89,7 @@ class CompanyInvitationViewSetTests(APITestCase):
         
         # check invitation status did not change
         self.invitation1.refresh_from_db()
-        assert self.invitation1.status == RequestState.AWAITING_RESPONSE.value
-        
+        assert self.invitation1.status == RequestState.PENDING
         
     def test_decline_invitation_success(self):
         # auth receiver1
@@ -105,23 +102,20 @@ class CompanyInvitationViewSetTests(APITestCase):
 
         # check invitation status
         self.invitation1.refresh_from_db()
-        assert self.invitation1.status == RequestState.DECLINED.value
-
+        assert self.invitation1.status == RequestState.DECLINED
 
     def test_decline_invitation_already_processed(self):
         # auth receiver1
         self.client.force_authenticate(user=self.receiver1)
         
         # update status to DECLINED
-        self.invitation1.status = RequestState.DECLINED.value
+        self.invitation1.status = RequestState.DECLINED
         self.invitation1.save()
 
         # try to decline again
         url = f'/api/v1/invitations/{self.invitation1.pk}/decline/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        
-
 
     def test_decline_invitation_by_non_receiver(self):
         # auth owner
@@ -134,8 +128,7 @@ class CompanyInvitationViewSetTests(APITestCase):
         
         # check invitation status did not change
         self.invitation1.refresh_from_db()
-        assert self.invitation1.status == RequestState.AWAITING_RESPONSE.value
-
+        assert self.invitation1.status == RequestState.PENDING
 
     def test_cancel_invitation_by_non_owner(self):
         # auth receiver
@@ -147,22 +140,20 @@ class CompanyInvitationViewSetTests(APITestCase):
         
         # check invitation status did not change
         self.invitation1.refresh_from_db()
-        assert self.invitation1.status == RequestState.AWAITING_RESPONSE.value
-        
+        assert self.invitation1.status == RequestState.PENDING
         
     def test_cancel_invitation_already_processed(self):
         # auth owner
         self.client.force_authenticate(user=self.owner)
         
         # update status to ACCEPTED
-        self.invitation1.status = RequestState.ACCEPTED.value
+        self.invitation1.status = RequestState.ACCEPTED
         self.invitation1.save()
-        assert self.invitation1.status == RequestState.ACCEPTED.value
+        assert self.invitation1.status == RequestState.ACCEPTED
         # try to cancel an already processed invitation
         url = f'/api/v1/invitations/{self.invitation1.pk}/cancelled/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        
         
     def test_list_user_invitations(self):
         # auth receiver
@@ -178,13 +169,12 @@ class CompanyInvitationViewSetTests(APITestCase):
         assert len(response_data) == 1  # Only 1 invitation for receiver1
         assert response_data[0]['id'] == self.invitation1.id
 
-
     def test_list_owner_invitations(self):
         # auth sender
         self.client.force_authenticate(user=self.owner)
 
         # send GET request
-        url = '/api/v1/invitations/owner-invitations/'
+        url = '/api/v1/invitations/'
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -194,7 +184,6 @@ class CompanyInvitationViewSetTests(APITestCase):
         assert response_data[0]['id'] == self.invitation1.id
         assert response_data[1]['id'] == self.invitation2.id
 
-        
         
 class CompanyInvitationSerializerTests(APITestCase):
 
@@ -216,7 +205,7 @@ class CompanyInvitationSerializerTests(APITestCase):
             name="Test1", 
             description="Test description", 
             owner=self.owner,  
-            visibility="visible"  
+            visibility=Visibility.VISIBLE  
         )
         
     def test_create_invitation_success(self):
@@ -239,7 +228,7 @@ class CompanyInvitationSerializerTests(APITestCase):
         assert invitation.sender == self.owner
         assert invitation.receiver == self.receiver1
         assert invitation.company == self.company1
-        assert invitation.status == RequestState.AWAITING_RESPONSE.value
+        assert invitation.status == RequestState.PENDING
 
     def test_create_invitation_user_already_member(self):
         # Add receiver1 as a member of company1
@@ -264,7 +253,7 @@ class CompanyInvitationSerializerTests(APITestCase):
             sender=self.owner,
             receiver=self.receiver1,
             company=self.company1,
-            status=RequestState.AWAITING_RESPONSE.value
+            status=RequestState.PENDING
         )
         data = {
             'receiver': self.receiver1.pk,
@@ -277,7 +266,6 @@ class CompanyInvitationSerializerTests(APITestCase):
         
         # Check status 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-    
     
     
 class CompanyRequestViewSetTests(APITestCase):
@@ -300,7 +288,7 @@ class CompanyRequestViewSetTests(APITestCase):
             name="TestCompany", 
             description="Test description", 
             owner=self.receiver,  
-            visibility="visible"
+            visibility=Visibility.VISIBLE
         )
         
         # Create a request
@@ -308,7 +296,7 @@ class CompanyRequestViewSetTests(APITestCase):
             sender=self.sender,
             receiver=self.receiver,
             company=self.company,
-            status=RequestState.AWAITING_RESPONSE.value
+            status=RequestState.PENDING
         )
 
     def test_accept_request_success(self):
@@ -322,18 +310,17 @@ class CompanyRequestViewSetTests(APITestCase):
 
         # Verify request status is updated
         self.request.refresh_from_db()
-        assert self.request.status == RequestState.ACCEPTED.value
+        assert self.request.status == RequestState.ACCEPTED
 
         # Verify company member is added
         assert CompanyMember.objects.filter(user=self.sender, company=self.company).exists()
-
 
     def test_accept_request_already_processed(self):
         # Authenticate as receiver
         self.client.force_authenticate(user=self.receiver)
 
         # Update request status to ACCEPTED
-        self.request.status = RequestState.ACCEPTED.value
+        self.request.status = RequestState.ACCEPTED
         self.request.save()
 
         # Try to accept the already processed request
@@ -352,7 +339,7 @@ class CompanyRequestViewSetTests(APITestCase):
 
         # Verify request status remains unchanged
         self.request.refresh_from_db()
-        assert self.request.status == RequestState.AWAITING_RESPONSE.value
+        assert self.request.status == RequestState.PENDING
 
     def test_decline_request_success(self):
         # Authenticate as receiver
@@ -365,14 +352,14 @@ class CompanyRequestViewSetTests(APITestCase):
 
         # Verify request status is updated
         self.request.refresh_from_db()
-        assert self.request.status == RequestState.DECLINED.value
+        assert self.request.status == RequestState.DECLINED
 
     def test_decline_request_already_processed(self):
         # Authenticate as receiver
         self.client.force_authenticate(user=self.receiver)
 
         # Update request status to DECLINED
-        self.request.status = RequestState.DECLINED.value
+        self.request.status = RequestState.DECLINED
         self.request.save()
 
         # Try to decline the already processed request
@@ -393,7 +380,7 @@ class CompanyRequestViewSetTests(APITestCase):
 
         # Verify request status is updated
         self.request.refresh_from_db()
-        assert self.request.status == RequestState.CANCELLED.value
+        assert self.request.status == RequestState.CANCELLED
 
     def test_cancel_request_by_non_sender(self):
         # Authenticate as receiver
@@ -402,11 +389,12 @@ class CompanyRequestViewSetTests(APITestCase):
         # Try to cancel request as receiver
         url = f'/api/v1/requests/{self.request.pk}/cancelled/'
         response = self.client.patch(url)
+        print(response.status_code)
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
         # Verify request status remains unchanged
         self.request.refresh_from_db()
-        assert self.request.status == RequestState.AWAITING_RESPONSE.value
+        assert self.request.status == RequestState.PENDING
 
     def test_list_user_requests(self):
         # Authenticate as sender
@@ -427,7 +415,7 @@ class CompanyRequestViewSetTests(APITestCase):
         self.client.force_authenticate(user=self.receiver)
 
         # Send GET request
-        url = '/api/v1/requests/owner-requests/'
+        url = '/api/v1/requests/'
         response = self.client.get(url)
         assert response.status_code == status.HTTP_200_OK
 
@@ -457,7 +445,7 @@ class CompanyRequestSerializerTests(APITestCase):
             name="TestCompany", 
             description="Test description", 
             owner=self.receiver,  
-            visibility="visible"
+            visibility=Visibility.VISIBLE
         )
         
 
@@ -476,7 +464,7 @@ class CompanyRequestSerializerTests(APITestCase):
         assert request_obj.sender == self.sender
         assert request_obj.receiver == self.receiver
         assert request_obj.company == self.company
-        assert request_obj.status == RequestState.AWAITING_RESPONSE.value
+        assert request_obj.status == RequestState.PENDING
 
     def test_create_request_user_already_member(self):
         # add sender as member
@@ -497,7 +485,7 @@ class CompanyRequestSerializerTests(APITestCase):
             sender=self.sender, 
             receiver=self.receiver, 
             company=self.company, 
-            status=RequestState.AWAITING_RESPONSE.value)
+            status=RequestState.PENDING)
 
         # auth sender
         self.client.force_authenticate(user=self.sender)
@@ -534,14 +522,14 @@ class CompanyMemberViewSetTests(APITestCase):
             name="TestCompany", 
             description="Test description", 
             owner=self.owner,
-            visibility="visible"
+            visibility=Visibility.VISIBLE
         )
         # Create  hidden company 
         self.company2 = Company.objects.create(
             name="TestCompany", 
             description="Test description", 
             owner=self.owner,
-            visibility="hidden"
+            visibility=Visibility.HIDDEN
         )
         
         CompanyMember.objects.create(user=self.owner, company=self.company)
@@ -573,7 +561,6 @@ class CompanyMemberViewSetTests(APITestCase):
 
         # Check permission denied
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-    
 
     def test_kick_from_company_success(self):
         # Auth as owner
@@ -612,7 +599,6 @@ class CompanyMemberViewSetTests(APITestCase):
         # Check number of members
         self.assertEqual(len(response.data), 2)  
         
-        
     def test_list_members_success_company_hidden(self):
         # Auth as owner
         self.client.force_authenticate(user=self.owner)
@@ -635,5 +621,4 @@ class CompanyMemberViewSetTests(APITestCase):
 
         # Check permission denied
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        
         

@@ -30,6 +30,9 @@ class CompanyInvitationSerializer(serializers.ModelSerializer):
         receiver = validated_data.get('receiver')
         company = validated_data.get('company')
 
+        if company.owner != sender:
+            raise serializers.ValidationError(_("You must be the owner of the company to send an invitation."))
+        
         existing_invitation = CompanyInvitation.objects.filter(
             sender=sender,
             company=company
@@ -38,14 +41,14 @@ class CompanyInvitationSerializer(serializers.ModelSerializer):
         if CompanyMember.objects.filter(user=receiver, company=company).exists():
             raise serializers.ValidationError(_("User is already a member of this company."))
 
-        if existing_invitation and existing_invitation.status == RequestState.AWAITING_RESPONSE.value:
+        if existing_invitation and existing_invitation.status == RequestState.PENDING:
             raise serializers.ValidationError(_("Invitation already processed."))
 
         invitation = CompanyInvitation.objects.create(
             sender=sender,
             receiver=receiver,
             company=company,
-            status=RequestState.AWAITING_RESPONSE.value
+            status=RequestState.PENDING
         )
 
         return invitation
@@ -71,13 +74,13 @@ class CompanyRequestSerializer(serializers.ModelSerializer):
         if CompanyMember.objects.filter(user=sender, company=company).exists():
             raise serializers.ValidationError(_("User is already a member of this company."))
 
-        if existing_request and existing_request.status == RequestState.AWAITING_RESPONSE.value:
+        if existing_request and existing_request.status == RequestState.PENDING:
             raise serializers.ValidationError(_("Request already processed."))
     
         request = CompanyRequest.objects.create(
             sender=sender,receiver=company.owner,
             company=company,
-            status=RequestState.AWAITING_RESPONSE.value)
+            status=RequestState.PENDING)
 
         return request
 

@@ -4,14 +4,10 @@ from django.db import models
 
 from tools.models import TimeStampedModel
 
-from .enums import RequestState, Role
+from .enums import RequestState, Role, Visibility
 
 
 class Company(TimeStampedModel):
-    VISIBILITY_CHOICES = [
-        ('hidden', 'hidden'),
-        ('visible', 'visible'),
-    ]
     name = models.CharField(max_length=50)
     description = models.TextField()
     owner = models.ForeignKey(
@@ -20,8 +16,8 @@ class Company(TimeStampedModel):
         on_delete=models.CASCADE)
     visibility = models.CharField(
         max_length=7,
-        choices=VISIBILITY_CHOICES,
-        default='visible'
+        choices=Visibility.choices,
+        default=Visibility.VISIBLE
     
     )
     class Meta:
@@ -44,8 +40,8 @@ class CompanyInvitation(TimeStampedModel):
     )
     status = models.CharField(
         max_length=20,
-        choices=RequestState.choices(),
-        default=RequestState.AWAITING_RESPONSE.value,
+        choices=RequestState.choices,
+        default=RequestState.PENDING,
         
     )
     
@@ -77,8 +73,8 @@ class CompanyRequest(TimeStampedModel):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     status = models.CharField(
         max_length=20,
-        choices=RequestState.choices(),
-        default=RequestState.AWAITING_RESPONSE.value,
+        choices=RequestState.choices,
+        default=RequestState.PENDING,
         
     )
     
@@ -99,8 +95,8 @@ class CompanyMember(TimeStampedModel):
     )
     role = models.CharField(
         max_length=10,
-        choices=Role.choices(),
-        default=Role.MEMBER.value
+        choices=Role.choices,
+        default=Role.MEMBER
     )
 
     class Meta:
