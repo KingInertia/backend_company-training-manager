@@ -1,13 +1,12 @@
 from rest_framework import permissions
 
-from .enums import Visibility
 from .models import Company, CompanyMember
 
 
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
-            return obj.visibility == Visibility.VISIBLE or obj.owner == request.user
+            return obj.visibility == Company.Visibility.VISIBLE or obj.owner == request.user
         
         return obj.owner == request.user
     

@@ -1,13 +1,16 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 from tools.models import TimeStampedModel
 
-from .enums import RequestState, Role, Visibility
-
 
 class Company(TimeStampedModel):
+    class Visibility(models.TextChoices):
+        HIDDEN = 'hidden', _('Hidden')
+        VISIBLE = 'visible', _('Visible')
+            
     name = models.CharField(max_length=50)
     description = models.TextField()
     owner = models.ForeignKey(
@@ -25,6 +28,12 @@ class Company(TimeStampedModel):
         
 
 class CompanyInvitation(TimeStampedModel):
+    class InvitationState(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        ACCEPTED = 'accepted', 'Accepted'
+        DECLINED = 'declined', 'Declined'
+        REVOKED = 'revoked', 'Revoked'
+        
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='sent_invitations',
@@ -40,8 +49,8 @@ class CompanyInvitation(TimeStampedModel):
     )
     status = models.CharField(
         max_length=20,
-        choices=RequestState.choices,
-        default=RequestState.PENDING,
+        choices=InvitationState.choices,
+        default=InvitationState.PENDING,
         
     )
     
@@ -58,6 +67,12 @@ class CompanyInvitation(TimeStampedModel):
     
     
 class CompanyRequest(TimeStampedModel):
+    class RequestState(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+        CANCELLED = 'cancelled', 'Cancelled'
+        
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='sent_requests',
@@ -83,6 +98,10 @@ class CompanyRequest(TimeStampedModel):
 
 
 class CompanyMember(TimeStampedModel):
+    class Role(models.TextChoices):
+        OWNER = 'owner', _('Owner')
+        MEMBER = 'member', _('Member')
+    
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

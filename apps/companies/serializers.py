@@ -1,7 +1,6 @@
 from django.utils.translation import gettext as _
 from rest_framework import serializers
 
-from .enums import RequestState
 from .models import Company, CompanyInvitation, CompanyMember, CompanyRequest
 
 
@@ -41,14 +40,14 @@ class CompanyInvitationSerializer(serializers.ModelSerializer):
         if CompanyMember.objects.filter(user=receiver, company=company).exists():
             raise serializers.ValidationError(_("User is already a member of this company."))
 
-        if existing_invitation and existing_invitation.status == RequestState.PENDING:
+        if existing_invitation and existing_invitation.status == CompanyInvitation.InvitationState.PENDING:
             raise serializers.ValidationError(_("Invitation already processed."))
 
         invitation = CompanyInvitation.objects.create(
             sender=sender,
             receiver=receiver,
             company=company,
-            status=RequestState.PENDING
+            status=CompanyRequest.RequestState.PENDING
         )
 
         return invitation
@@ -74,13 +73,13 @@ class CompanyRequestSerializer(serializers.ModelSerializer):
         if CompanyMember.objects.filter(user=sender, company=company).exists():
             raise serializers.ValidationError(_("User is already a member of this company."))
 
-        if existing_request and existing_request.status == RequestState.PENDING:
+        if existing_request and existing_request.status == CompanyRequest.RequestState.PENDING:
             raise serializers.ValidationError(_("Request already processed."))
     
         request = CompanyRequest.objects.create(
             sender=sender,receiver=company.owner,
             company=company,
-            status=RequestState.PENDING)
+            status=CompanyRequest.RequestState.PENDING)
 
         return request
 
