@@ -48,6 +48,12 @@ class CompanyInvitationViewSetTests(APITestCase):
             status=CompanyInvitation.InvitationState.PENDING
         )
         
+        self.other_user = User.objects.create_user(
+            username="other_user", 
+            password="1Qaz_2wsx_3edc", 
+            email="other_user@example.com"
+        )
+        
     def test_accept_invitation_success(self): 
         # auth receiver1
         self.client.force_authenticate(user=self.receiver1)
@@ -90,6 +96,15 @@ class CompanyInvitationViewSetTests(APITestCase):
         self.invitation1.refresh_from_db()
         assert self.invitation1.status == CompanyInvitation.InvitationState.PENDING
         
+    def test_accept_invitation_not_found(self):
+        # auth receiver1
+        self.client.force_authenticate(user=self.receiver1)
+        
+        # try to accept a non-existent invitation
+        url = '/api/v1/invitations/999/accept/'
+        response = self.client.patch(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        
     def test_decline_invitation_success(self):
         # auth receiver1
         self.client.force_authenticate(user=self.receiver1)
@@ -115,6 +130,7 @@ class CompanyInvitationViewSetTests(APITestCase):
         url = f'/api/v1/invitations/{self.invitation1.pk}/decline/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
+        
 
     def test_decline_invitation_by_non_receiver(self):
         # auth owner
@@ -129,6 +145,15 @@ class CompanyInvitationViewSetTests(APITestCase):
         self.invitation1.refresh_from_db()
         assert self.invitation1.status == CompanyInvitation.InvitationState.PENDING
         
+    def test_decline_invitation_not_found(self):
+        # auth receiver1
+        self.client.force_authenticate(user=self.receiver1)
+        
+        # try to decline a non-existent invitation
+        url = '/api/v1/invitations/999/decline/'
+        response = self.client.patch(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
     def test_revoke_invitation_success(self):
         # auth receiver1
         self.client.force_authenticate(user=self.owner)
@@ -168,6 +193,29 @@ class CompanyInvitationViewSetTests(APITestCase):
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         
+    def test_update_invitation_not_allowed(self):
+        # Authenticate as sender
+        self.client.force_authenticate(user=self.owner)
+
+        # Prepare data for updating the invitation
+        updated_data = {
+            "status": CompanyInvitation.InvitationState.ACCEPTED,
+        }
+
+        # Try to directly update the invitation
+        url = f'/api/v1/invitations/{self.invitation1.pk}/'
+        response = self.client.patch(url, updated_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        
+    def test_destroy_invitation_permission_denied(self):
+        # auth receiver1
+        self.client.force_authenticate(user=self.receiver1)
+        
+        # try to delete an invitation
+        url = f'/api/v1/invitations/{self.invitation1.pk}/'
+        response = self.client.delete(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN    
+        
     def test_list_user_invitations(self):
         # auth receiver
         self.client.force_authenticate(user=self.receiver1)
@@ -181,6 +229,18 @@ class CompanyInvitationViewSetTests(APITestCase):
         response_data = response.json()
         assert len(response_data) == 1  # Only 1 invitation for receiver1
         assert response_data[0]['id'] == self.invitation1.id
+        
+    def test_list_user_invitations_no_invitations(self):
+        # Authenticate as a user who has no invitations
+        self.client.force_authenticate(user=self.other_user)
+
+        # Send GET request to get user's invitations
+        url = '/api/v1/invitations/user-invitations/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify the response contains an empty list, as the user has no invitations
+        self.assertEqual(response.json(), [])
 
     def test_list_owner_invitations(self):
         # auth sender
@@ -196,6 +256,18 @@ class CompanyInvitationViewSetTests(APITestCase):
         assert len(response_data) == 2
         assert response_data[0]['id'] == self.invitation1.id
         assert response_data[1]['id'] == self.invitation2.id
+
+    def test_list_owner_invitations_no_invitations(self):
+        # Authenticate as the owner (who has no invitations)
+        self.client.force_authenticate(user=self.other_user)
+
+        # Send GET request to list invitations
+        url = '/api/v1/invitations/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify the response contains an empty list, as the owner has no invitations
+        self.assertEqual(response.json(), [])
 
         
 class CompanyInvitationSerializerTests(APITestCase):
@@ -294,6 +366,12 @@ class CompanyRequestViewSetTests(APITestCase):
             username="receiver", 
             password="1Qaz_2wsx_3edc", 
             email="receiver@example.com"
+        )
+        
+        self.other_user = User.objects.create_user(
+            username="other_user", 
+            password="1Qaz_2wsx_3edc", 
+            email="other_user@example.com"
         )
         
         # Create company for testing
@@ -407,6 +485,60 @@ class CompanyRequestViewSetTests(APITestCase):
         # Verify request status remains unchanged
         self.request.refresh_from_db()
         assert self.request.status == CompanyRequest.RequestState.PENDING
+        
+    def test_cancel_request_already_processed(self):
+        # Authenticate as sender
+        self.client.force_authenticate(user=self.sender)
+
+        # Update request status to a processed state 
+        self.request.status = CompanyRequest.RequestState.APPROVED
+        self.request.save()
+
+        # Try to cancel the processed request
+        url = f'/api/v1/requests/{self.request.pk}/cancelled/'
+        response = self.client.patch(url)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        
+    def test_cancel_request_not_found(self):
+        # Authenticate as sender
+        self.client.force_authenticate(user=self.sender)
+
+        # Try to cancel a non-existent request
+        url = '/api/v1/requests/999/cancelled/'
+        response = self.client.patch(url)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        
+    def test_request_invitation_permission_denied(self):
+        # Authenticate as a user without permission
+        self.client.force_authenticate(user=self.sender)
+
+        # Try to delete an invitation
+        url = f'/api/v1/requests/{self.request.pk}/'
+        response = self.client.delete(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        
+    def test_update_request_not_allowed(self):
+        # Authenticate as sender
+        self.client.force_authenticate(user=self.receiver)
+
+        # Prepare data for updating the request
+        updated_data = {
+            "status": CompanyRequest.RequestState.APPROVED,
+        }
+
+        # Try to directly update the request
+        url = f'/api/v1/requests/{self.request.pk}/'
+        response = self.client.patch(url, updated_data)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        
+    def test_destroy_request_permission_denied(self):
+        # Authenticate as a user without permission
+        self.client.force_authenticate(user=self.receiver)
+
+        # Try to delete a request
+        url = f'/api/v1/requests/{self.request.pk}/'
+        response = self.client.delete(url)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_list_user_requests(self):
         # Authenticate as sender
@@ -421,6 +553,18 @@ class CompanyRequestViewSetTests(APITestCase):
         response_data = response.json()
         assert len(response_data) == 1
         assert response_data[0]['id'] == self.request.id
+        
+    def test_list_user_requests_no_requests(self):
+        # Authenticate as a user who has no requests
+        self.client.force_authenticate(user=self.other_user)
+
+        # Send GET request to get user's requests
+        url = '/api/v1/requests/user-requests/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify the response contains an empty list, as the user has no requests
+        self.assertEqual(response.json(), [])
 
     def test_list_owner_requests(self):
         # Authenticate as receiver
@@ -435,6 +579,20 @@ class CompanyRequestViewSetTests(APITestCase):
         response_data = response.json()
         assert len(response_data) == 1
         assert response_data[0]['id'] == self.request.id
+        
+    def test_list_owner_requests_no_requests(self):
+        # Authenticate as the owner (who has no requests)
+        self.client.force_authenticate(user=self.other_user)
+
+        # Send GET request to list requests
+        url = '/api/v1/requests/'
+        response = self.client.get(url)
+
+        # Check that response status is 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify the response contains an empty list, as the owner has no requests
+        self.assertEqual(response.json(), [])
         
 
 class CompanyRequestSerializerTests(APITestCase):
@@ -523,6 +681,7 @@ class CompanyMemberViewSetTests(APITestCase):
             password="1Qaz_2wsx_3edc", 
             email="member@example.com"
         )
+
         self.other_user = User.objects.create_user(
             username="other_user", 
             password="1Qaz_2wsx_3edc", 
@@ -573,7 +732,17 @@ class CompanyMemberViewSetTests(APITestCase):
 
         # Check permission denied
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+    def test_leave_company_owner(self):
+        # Auth as owner
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id}
 
+        # Send DELETE request to leave company
+        url = '/api/v1/company-members/leave/'
+        response = self.client.delete(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
     def test_kick_from_company_success(self):
         # Auth as owner
         self.client.force_authenticate(user=self.owner)
@@ -595,9 +764,37 @@ class CompanyMemberViewSetTests(APITestCase):
         # Send DELETE request to kick member
         url = '/api/v1/company-members/kick/'
         response = self.client.delete(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)        
+        
+    def test_kick_from_company_missing_data(self):
+        # Auth as owner
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id}  # Missing user ID
 
-        # Check permission denied
+        # Send DELETE request to kick member without user ID
+        url = '/api/v1/company-members/kick/'
+        response = self.client.delete(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_kick_from_company_kick_owner(self):
+        # Auth as owner
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.owner.id}
+
+        # Send DELETE request to kick owner
+        url = '/api/v1/company-members/kick/'
+        response = self.client.delete(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+    def test_kick_from_company_user_not_member(self):
+        # Auth as owner
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.other_user.id}  # Non-member user
+
+        # Send DELETE request to kick non-member user
+        url = '/api/v1/company-members/kick/'
+        response = self.client.delete(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_list_members_success(self):
         # Auth as owner
@@ -630,7 +827,94 @@ class CompanyMemberViewSetTests(APITestCase):
         # Send GET request to list members
         url = '/api/v1/company-members/members/?company=' + str(self.company2.id)
         response = self.client.get(url)
-
-        # Check permission denied
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+    def test_create_company_member_not_allowed(self):
+        # Authenticate as user
+        self.client.force_authenticate(user=self.owner)
+
+        # Prepare data to create a company member
+        data = {'user': self.owner.id, 'company': self.company.id}
+
+        # Try to directly create a company member
+        url = '/api/v1/company-members/'
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_not_available(self):
+        # Auth as member
+        self.client.force_authenticate(user=self.member)
+
+        # Send GET request to list members
+        url = '/api/v1/company-members/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+    def test_destroy_not_allowed(self):
+        # Auth as member
+        self.client.force_authenticate(user=self.member)
+
+        # Send DELETE request to destroy a member
+        url = f'/api/v1/company-members/{self.member.id}/' 
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_is_member_of_company_success(self):
+        # Auth as member
+        self.client.force_authenticate(user=self.member)
+
+        # Send GET request to check if user is a member of the company
+        url = f'/api/v1/company-members/is-member/?company={self.company.id}'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["is_member"], True)
+        
+    def test_is_member_of_company_not_member(self):
+        # Auth as non-member
+        self.client.force_authenticate(user=self.other_user)
+
+        # Send GET request to check if user is a member of the company
+        url = f'/api/v1/company-members/is-member/?company={self.company.id}'
+        response = self.client.get(url)
+
+        # Check response status and data
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["is_member"], False)
+        
+    def test_is_member_of_company_no_company_id(self):
+        # Auth as member
+        self.client.force_authenticate(user=self.member)
+
+        # Send GET request without company ID
+        url = '/api/v1/company-members/is-member/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+    def test_user_memberships_success(self):
+        # Auth as a user with memberships
+        self.client.force_authenticate(user=self.member)
+
+        # Send GET request to retrieve user memberships
+        url = '/api/v1/company-members/user-memberships/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify that the response contains the companies the user is a member of
+        company_data = response.data
+        self.assertTrue(len(company_data) > 0)
+        for company in company_data:
+            self.assertIn('company', company)
+            self.assertIn('company__name', company)
+            
+    def test_user_memberships_no_companies(self):
+        # Auth as a user with no memberships
+        self.client.force_authenticate(user=self.other_user)
+
+        # Send GET request to retrieve user memberships
+        url = '/api/v1/company-members/user-memberships/'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(response.data)
+        # Verify the response contains an empty list, as the user has no memberships
+        self.assertEqual(list(response.data), [])
         
