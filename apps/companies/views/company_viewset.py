@@ -1,11 +1,13 @@
 from django.db.models import Q
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from ..models import Company, CompanyMember
 from ..permission import IsOwner
-from ..serializers import CompanyListSerializer, CompanySerializer
+from ..serializers import CompanyListSerializer, CompanyNamesSerializer, CompanySerializer
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -37,3 +39,10 @@ class CompanyViewSet(viewsets.ModelViewSet):
         )
 
         return companies    
+    
+    @action(detail=False, methods=['get'], url_path='my-companies')
+    def owner_companies(self, request):
+        user = request.user
+        companies = Company.objects.filter(owner=user)
+        serializer = CompanyNamesSerializer(companies, many=True)
+        return Response(serializer.data)
