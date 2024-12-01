@@ -46,3 +46,26 @@ class CompanyViewSet(viewsets.ModelViewSet):
         companies = Company.objects.filter(owner=user)
         serializer = CompanyNamesSerializer(companies, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='user-companies')
+    def user_companies(self, request):
+        currentUser = request.user
+        user = request.query_params.get('user')
+        
+        if not user:
+            return Response({"error": "User parameter is required"}, status=400)
+        
+        user_memberships = CompanyMember.objects.filter(user=user)
+        company_ids = user_memberships.values_list('company', flat=True)
+        companies = None
+        
+        companies = Company.objects.filter(
+            Q(owner=user) | 
+            Q(id__in=company_ids)
+        )
+        
+        if currentUser.id != user:
+            companies = companies.exclude(visibility=Company.Visibility.HIDDEN)
+            
+        serializer = CompanyNamesSerializer(companies, many=True)
+        return Response(serializer.data) 

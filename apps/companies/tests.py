@@ -795,6 +795,88 @@ class CompanyMemberViewSetTests(APITestCase):
         url = '/api/v1/company-members/kick/'
         response = self.client.delete(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        
+    def test_appoint_admin_success(self):
+        # Auth as owner
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.member.id}
+
+        # Send request to appoint admin
+        url = '/api/v1/company-members/appoint-admin/' 
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify the member is now an admin
+        membership = CompanyMember.objects.get(user=self.member, company=self.company)
+        self.assertEqual(membership.role, CompanyMember.Role.ADMIN)
+
+    def test_appoint_admin_already_admin(self):
+        #make the member an admin
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.member.id}
+        url = '/api/v1/company-members/appoint-admin/'
+        self.client.patch(url, data, format='json')
+        
+        # Send PATCH request to appoint admin
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_appoint_admin_not_member(self):
+        # Auth as owner
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.other_user.id}  # Non-member 
+
+        # Send PATCH request to appoint admin
+        url = '/api/v1/company-members/appoint-admin/'
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_appoint_admin_permission_denied(self):
+        # Auth as member
+        self.client.force_authenticate(user=self.member)
+        data = {'company': self.company.id, 'user': self.other_user.id}
+
+        # Send PATCH request to appoint admin
+        url = '/api/v1/company-members/appoint-admin/'
+        response = self.client.patch(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_remove_admin_success(self):
+        #make the member an admin
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.member.id}
+        url = '/api/v1/company-members/appoint-admin/'
+        self.client.patch(url, data, format='json')
+
+        # try to remove the admin
+        data = {'company': self.company.id, 'user': self.member.id}
+        url = '/api/v1/company-members/remove-admin/'
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify the admin role is removed
+        membership = CompanyMember.objects.get(user=self.member, company=self.company)
+        self.assertEqual(membership.role, CompanyMember.Role.MEMBER)
+
+    def test_remove_admin_not_admin(self):
+        # Auth as owner, but try to remove non-admin
+        self.client.force_authenticate(user=self.owner)
+        data = {'company': self.company.id, 'user': self.member.id}
+
+        # Send POST request to remove admin
+        url = '/api/v1/company-members/remove-admin/'
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_remove_admin_permission_denied(self):
+        # Auth as member
+        self.client.force_authenticate(user=self.member)
+        data = {'company': self.company.id, 'user': self.owner.id}  # Member trying to remove owner
+
+        # Send POST request to remove admin
+        url = '/api/v1/company-members/remove-admin/'
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_list_members_success(self):
         # Auth as owner

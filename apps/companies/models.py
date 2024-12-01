@@ -101,6 +101,7 @@ class CompanyMember(TimeStampedModel):
     class Role(models.TextChoices):
         OWNER = 'owner', _('Owner')
         MEMBER = 'member', _('Member')
+        ADMIN = 'admin', _('Admin')
     
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
