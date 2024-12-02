@@ -68,9 +68,11 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         company_id = request.data.get('company')
         user_id = request.data.get('user')
         
-        membership = CompanyMember.objects.filter(user=user_id, company=company_id).first()
-        if not membership:
+        membership_exists = CompanyMember.objects.filter(user=user_id, company=company_id).exists()
+        if not membership_exists:
             return Response({"detail": "User is not a member of this company."}, status=status.HTTP_404_NOT_FOUND)
+        
+        membership = CompanyMember.objects.filter(user=user_id, company=company_id).first()
         
         if membership.role in [CompanyMember.Role.ADMIN, CompanyMember.Role.OWNER]:
             return Response({"detail": "This user is already an admin or owner."}, status=status.HTTP_403_FORBIDDEN)

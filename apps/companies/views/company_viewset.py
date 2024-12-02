@@ -49,7 +49,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], url_path='user-companies')
     def user_companies(self, request):
-        currentUser = request.user
+        current_user = request.user
         user = request.query_params.get('user')
         
         if not user:
@@ -64,7 +64,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             Q(id__in=company_ids)
         )
         
-        if currentUser.id != user:
+        if current_user.id != user:
             companies = companies.exclude(visibility=Company.Visibility.HIDDEN)
             
         serializer = CompanyNamesSerializer(companies, many=True)
