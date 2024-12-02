@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -16,9 +17,12 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
     
 
     def get_permissions(self):
-        if self.action == 'leave_company':
+        owner_actions = ['kick_from_company', 'appoint_admin', 'remove_admin']
+        member_actions = ['leave_company']
+        
+        if self.action in member_actions:
             return [IsMemberOfCompany()]
-        elif self.action == 'kick_from_company':
+        elif self.action in owner_actions:
             return [IsOwnerOfCompany()]
         return super().get_permissions()
 
@@ -26,7 +30,7 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
     def leave_company(self, request):
         company_id = request.data.get('company')
         
-        company = Company.objects.get(id=company_id)
+        company = get_object_or_404(Company, id=company_id)
                             
         if company.owner == request.user:
             return Response({"detail": "Owner cannot leave the company."}, status=status.HTTP_403_FORBIDDEN)       
@@ -46,7 +50,7 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         if not company_id or not user_id:
             return Response({"detail": "Company ID and User ID are required."}, status=status.HTTP_400_BAD_REQUEST)
         
-        company = Company.objects.get(id=company_id)
+        company = get_object_or_404(Company, id=company_id)
 
         if company.owner.id == user_id:
             return Response({"detail": "You cannot kick the owner of the company."}, status=status.HTTP_403_FORBIDDEN)
@@ -59,6 +63,69 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "User has been successfully kicked from the company."}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['patch'], url_path='appoint-admin')
+    def appoint_admin(self, request):
+        company_id = request.data.get('company')
+        user_id = request.data.get('user')
+        
+        membership_exists = CompanyMember.objects.filter(user=user_id, company=company_id).exists()
+        if not membership_exists:
+            return Response({"detail": "User is not a member of this company."}, status=status.HTTP_404_NOT_FOUND)
+        
+        membership = CompanyMember.objects.filter(user=user_id, company=company_id).first()
+        
+        if membership.role in [CompanyMember.Role.ADMIN, CompanyMember.Role.OWNER]:
+            return Response({"detail": "This user is already an admin or owner."}, status=status.HTTP_403_FORBIDDEN)
+        
+        membership.role = CompanyMember.Role.ADMIN
+        membership.save()
+
+        return Response({"detail": "User has been appointed as admin."}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='remove-admin')
+    def remove_admin(self, request):
+        company_id = request.data.get('company')
+        user_id = request.data.get('user')
+
+        membership = get_object_or_404(CompanyMember, company=company_id, user=user_id)
+        if not membership:
+            return Response({"detail": "User is not a member of this company."}, status=status.HTTP_404_NOT_FOUND)
+
+        if membership.role != CompanyMember.Role.ADMIN:
+            return Response({"detail": "This user is not an admin."}, status=status.HTTP_400_BAD_REQUEST)
+
+        membership.role = CompanyMember.Role.MEMBER
+        membership.save()
+
+        return Response({"detail": "Admin role has been removed from the user."}, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'], url_path='admins')
+    def list_admins(self, request):
+        company_id = request.query_params.get('company')
+
+        if not company_id:
+            return Response({"detail": "Company ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            company = Company.objects.get(id=company_id)
+
+            if company.visibility != Company.Visibility.VISIBLE:
+                is_owner_or_member = CompanyMember.objects.filter(company=company, user=request.user).exists()
+                if not is_owner_or_member and company.owner != request.user:
+                    raise PermissionDenied()
+
+            admins = CompanyMember.objects.filter(company_id=company_id, role=CompanyMember.Role.ADMIN)
+
+            if not admins.exists():
+                return Response(
+                    {"detail": "No administrators found for this company."},
+                    status=status.HTTP_404_NOT_FOUND
+                    )
+
+            serializer = CompanyMemberSerializer(admins, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Company.DoesNotExist:
+            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
     @action(detail=False, methods=['get'], url_path='members')

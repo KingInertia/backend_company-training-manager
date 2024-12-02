@@ -16,7 +16,11 @@ class CompanyListSerializer (serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = ('__all__')
-
+        
+class CompanyNamesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Company
+        fields = ['id', 'name']
 
 class CompanyInvitationSerializer(serializers.ModelSerializer):
     sender = serializers.PrimaryKeyRelatedField(read_only=True)
