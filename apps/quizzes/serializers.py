@@ -49,10 +49,18 @@ class QuizSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Correct answer must be one of the answer options.")
             
         quiz = Quiz.objects.create(**validated_data)
+        questions = []
         for question_data in questions_data:
-            question_data['quiz'] = quiz
-            Question.objects.create(**question_data)
-        
+            question = Question(
+                quiz=quiz,
+                text=question_data['text'],
+                answers=question_data['answers'],
+                correct_answer=question_data['correct_answer']
+            )
+            questions.append(question)
+
+        Question.objects.bulk_create(questions)
+    
         return quiz
 
     def update(self, instance, validated_data):
@@ -86,33 +94,38 @@ class QuizSerializer(serializers.ModelSerializer):
         instance.frequency_days = validated_data.get('frequency_days', instance.frequency_days)
         instance.save()
 
-        current_questions = instance.questions.all()
+        current_questions = instance.questions.all()    
         
         current_questions_ids = set()
         for question in current_questions:
             current_questions_ids.add(question.id)
 
+        questions_to_create = []
+        questions_to_update = []
         new_question_ids = set()
+
         for new_question in new_questions:
             if 'id' in new_question:
                 new_question_ids.add(new_question['id'])
-            else:
-                new_question['quiz'] = instance
-                question =  Question.objects.create(**new_question)
-                new_question_ids.add(question.id)
-
-        for new_question in new_questions:
-            if 'id' in new_question:
                 question_id = new_question['id']
                 if question_id in current_questions_ids:
-                    old_question = instance.questions.get(id=question_id)
+                    old_question = current_questions.get(id=question_id)
                     old_question.text = new_question['text']
                     old_question.answers = new_question['answers']
                     old_question.correct_answer = new_question['correct_answer']
-                    old_question.save()
-
-        questions_to_delete = instance.questions.exclude(id__in=new_question_ids)
-        questions_to_delete.delete()
+                    questions_to_update.append(old_question)
+                    
+            else:
+                new_question['quiz'] = instance
+                questions_to_create.append(Question(**new_question))
+            
+        if new_question_ids:
+            instance.questions.filter(~Q(id__in=new_question_ids)).delete()
+            
+        if questions_to_create:
+            Question.objects.bulk_create(questions_to_create)
+            
+        if questions_to_update:
+            Question.objects.bulk_update(questions_to_update, ['text', 'answers', 'correct_answer'])
         
         return instance
-    

@@ -16,8 +16,8 @@ class QuizViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        companies = Company.objects.filter(memberships__user=user)
-        quizzes = Quiz.objects.filter(company__in=companies)
+        company_ids = Company.objects.filter(memberships__user=user).values_list('id', flat=True)
+        quizzes = Quiz.objects.filter(company__id__in=company_ids).prefetch_related('questions')
         
         return quizzes   
 
