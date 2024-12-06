@@ -47,8 +47,8 @@ class CompanyRequestViewSet(viewsets.ModelViewSet):
 
         return Response(CompanyRequestSerializer(request_obj).data)
 
-    @action(detail=True, methods=['patch'], url_path='cancelled')
-    def cancelled_request(self, request, *args, **kwargs):
+    @action(detail=True, methods=['patch'], url_path='cancel')
+    def cancel_request(self, request, *args, **kwargs):
         request_id = kwargs.get('pk')
         
         try:
