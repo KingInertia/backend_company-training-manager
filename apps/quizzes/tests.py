@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 
 from apps.companies.models import Company, CompanyMember
 
-from .models import Question, Quiz, QuizResult, UserQuizPassing
+from .models import Question, Quiz, QuizResult, UserQuizSession
 
 User = get_user_model()
 
@@ -83,11 +83,11 @@ class QuizTestCase(APITestCase):
             correct_answer=["4"]
         )
 
-        self.quiz_passing = UserQuizPassing.objects.create(
+        self.quiz_passing = UserQuizSession.objects.create(
             user=self.user2,
             quiz=self.quiz,
-            status=UserQuizPassing.Status.STARTED,
-            start_test_time=timezone.now()
+            status=UserQuizSession.Status.STARTED,
+            start_session_time=timezone.now()
         )
         
         self.user_quiz1_result = QuizResult.objects.create(
@@ -95,7 +95,7 @@ class QuizTestCase(APITestCase):
             quiz=self.quiz,
             correct_answers=8,
             total_questions=10,
-            test_time=timedelta(minutes=15)
+            quiz_time=timedelta(minutes=15)
         )
 
         self.user_quiz2_result = QuizResult.objects.create(
@@ -103,7 +103,7 @@ class QuizTestCase(APITestCase):
             quiz=self.quiz2,
             correct_answers=7,
             total_questions=10,
-            test_time=timedelta(minutes=15)
+            quiz_time=timedelta(minutes=15)
         )
 
         self.user_quiz3_result = QuizResult.objects.create(
@@ -111,7 +111,7 @@ class QuizTestCase(APITestCase):
             quiz=self.quiz3,
             correct_answers=5,
             total_questions=10,
-            test_time=timedelta(minutes=15)
+            quiz_time=timedelta(minutes=15)
         )
 
     def test_update_quiz_success(self):
@@ -195,11 +195,11 @@ class QuizTestCase(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(f'/api/v1/quizzes/start-quiz/?quiz={self.quiz.id}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        quiz_passing_exists = UserQuizPassing.objects.filter(user=self.user, quiz=self.quiz).exists()
+        quiz_passing_exists = UserQuizSession.objects.filter(user=self.user, quiz=self.quiz).exists()
         self.assertEqual(quiz_passing_exists, True)
         response_data = response.json()
-        self.assertIn('test_id', response_data)
-        self.assertIn('start_test_time', response_data)
+        self.assertIn('session_id', response_data)
+        self.assertIn('start_session_time', response_data)
         quiz_data = response_data['quiz']
         for question in quiz_data['questions']:
             self.assertEqual(question['correct_answer'], [])
@@ -213,17 +213,19 @@ class QuizTestCase(APITestCase):
         self.client.force_authenticate(user=self.user2)
         response = self.client.post(
             '/api/v1/quizzes/finish-quiz/', 
-            {'quiz_passing_id': self.quiz_passing.id, 'questions': user_answers},
+            {'session': self.quiz_passing.id, 'questions': user_answers},
             format='json'
         )
+        print(f"Response content: {response.content.decode('utf-8')}")
+ 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         quiz_result = QuizResult.objects.last()
         self.assertIsNotNone(quiz_result)
         self.assertEqual(quiz_result.correct_answers, 2)
         self.assertEqual(quiz_result.total_questions, 3)
-        self.assertIsInstance(quiz_result.test_time, timezone.timedelta)
+        self.assertIsInstance(quiz_result.quiz_time, timezone.timedelta)
         self.quiz_passing.refresh_from_db()
-        self.assertEqual(self.quiz_passing.status, UserQuizPassing.Status.COMPLETED)
+        self.assertEqual(self.quiz_passing.status, UserQuizSession.Status.COMPLETED)
 
     def test_user_company_score(self):
         self.client.force_authenticate(user=self.user)

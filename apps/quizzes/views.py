@@ -8,8 +8,8 @@ from rest_framework.response import Response
 
 from apps.companies.models import Company, CompanyMember
 
-from .models import Quiz, QuizResult, UserQuizPassing
-from .serializers import QuizForUserSerializer, QuizResultSerializer, QuizSerializer
+from .models import Quiz, QuizResult, UserQuizSession
+from .serializers import QuizForUserSerializer, QuizResultSerializer, QuizSerializer, QuizStartSessionSerializer
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -74,74 +74,72 @@ class QuizViewSet(viewsets.ModelViewSet):
         if not Quiz.objects.filter(id=quiz_id).exists():
             return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        quiz = Quiz.objects.prefetch_related('questions').get(id=quiz_id)
+        quiz = Quiz.objects.select_related('company').prefetch_related('questions').get(id=quiz_id)
         
         company_id = quiz.company.id
         
         membership = CompanyMember.objects.filter(user=user, company_id=company_id).exists()
-        
+
         if not membership:
             return Response({"detail": "User is not a member of this company."},
                             status=status.HTTP_404_NOT_FOUND)
-        
-        quiz_passing = UserQuizPassing.objects.filter(user=user, quiz=quiz,
-            status=UserQuizPassing.Status.STARTED).only('id', 'start_test_time').first()
 
-        if not quiz_passing:
-            quiz_passing = UserQuizPassing.objects.create(user=user, quiz=quiz)
+        quiz_session = UserQuizSession.objects.filter(user=user, quiz=quiz,
+            status=UserQuizSession.Status.STARTED).only('id', 'start_session_time').first()
+
+        if not quiz_session:
+            quiz_session = UserQuizSession.objects.create(user=user, quiz=quiz)
         
         for question in quiz.questions.all():
             question.correct_answer = []
 
-        quiz_data = QuizSerializer(quiz).data
-
-        response_data = {
-            'start_test_time': quiz_passing.start_test_time,
-            'test_id': quiz_passing.id,
-            'quiz': quiz_data,
-        }
-
+        response_data = QuizStartSessionSerializer({
+            'start_session_time': quiz_session.start_session_time,
+            'session_id': quiz_session.id,
+            'quiz': quiz
+        }).data    
+        
         return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='finish-quiz')
     def finish_quiz(self, request):
-        quiz_passing_id = request.data.get('quiz_passing_id')
+        quiz_session_id = request.data.get('session')
         user_answers = request.data.get('questions', [])
         user = request.user
         end_time = timezone.now()
 
-        if not quiz_passing_id or not user_answers:
-            return Response({"detail": "Quiz passing ID and questions are required."},
+        if not quiz_session_id or not user_answers:
+            return Response({"detail": "Quiz session_id ID and questions are required."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        if not UserQuizPassing.objects.filter(id=quiz_passing_id, user=user).exists():
-            return Response({"detail": "Quiz passing not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not UserQuizSession.objects.filter(id=quiz_session_id, user=user).exists():
+            return Response({"detail": "Quiz session_id not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        quiz_passing = UserQuizPassing.objects.get(id=quiz_passing_id)
+        quiz_session = UserQuizSession.objects.prefetch_related('quiz__questions').get(id=quiz_session_id)
 
-        if quiz_passing.status == UserQuizPassing.Status.COMPLETED:
+        if quiz_session.status == UserQuizSession.Status.COMPLETED:
             return Response({"detail": "Quiz already completed."}, status=status.HTTP_400_BAD_REQUEST)
 
-        quiz_passing.status = UserQuizPassing.Status.COMPLETED
-        quiz_passing.end_test_time = end_time
-        quiz_passing.save()
+        quiz_session.status = UserQuizSession.Status.COMPLETED
+        quiz_session.end_session_time = end_time
+        quiz_session.save()
         
-        correct_answers = quiz_passing.quiz.questions.values('id', 'correct_answer')
+        questions = quiz_session.quiz.questions.all()
+            
         correct_count = 0    
-        
         for user_answer in user_answers:
-            for correct_answer in correct_answers:
-                if user_answer['id'] == correct_answer['id']:
-                    if sorted(user_answer['correct_answer']) == sorted(correct_answer['correct_answer']):
+            for question in questions:
+                if user_answer['id'] == question.id:
+                    if sorted(user_answer['correct_answer']) == sorted(question.correct_answer):
                         correct_count += 1
                     break
 
         quiz_result = QuizResult.objects.create(
             user=user,
-            quiz=quiz_passing.quiz,
+            quiz=quiz_session.quiz,
             correct_answers=correct_count,
-            total_questions=len(correct_answers),
-            test_time=quiz_passing.end_test_time - quiz_passing.start_test_time
+            total_questions=len(questions),
+            quiz_time=quiz_session.end_session_time - quiz_session.start_session_time
         )
 
         serializer = QuizResultSerializer(quiz_result)

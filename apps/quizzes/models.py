@@ -20,7 +20,7 @@ class Question(TimeStampedModel):
     correct_answer = ArrayField(models.CharField(max_length=100))
     
     
-class UserQuizPassing(models.Model):
+class UserQuizSession(TimeStampedModel):
     class Status(models.TextChoices):
         STARTED = 'started', 'Started'
         COMPLETED = 'completed', 'Completed'
@@ -32,8 +32,8 @@ class UserQuizPassing(models.Model):
     )
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.STARTED)
-    start_test_time = models.DateTimeField(auto_now_add=True)
-    end_test_time = models.DateTimeField(null=True, blank=True)
+    start_session_time = models.DateTimeField(auto_now_add=True)
+    end_session_time = models.DateTimeField(null=True, blank=True)
     
     
 class QuizResult(TimeStampedModel):
@@ -41,4 +41,4 @@ class QuizResult(TimeStampedModel):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
     correct_answers = models.PositiveIntegerField()
     total_questions = models.PositiveIntegerField()
-    test_time = models.DurationField() 
+    quiz_time = models.DurationField() 

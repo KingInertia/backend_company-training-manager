@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.companies.models import CompanyMember
 
-from .models import Question, Quiz, QuizResult, UserQuizPassing
+from .models import Question, Quiz, QuizResult, UserQuizSession
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -138,13 +138,18 @@ class QuizForUserSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'created_at', 'frequency_days', 'company']
         
 
-class UserQuizPassingSerializer(serializers.ModelSerializer):
+class UserQuizSessionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UserQuizPassing
-        fields = ['id', 'user', 'quiz', 'status', 'start_test_time']
+        model = UserQuizSession
+        fields = ['id', 'user', 'quiz', 'status', 'start_session_time']
         
+
+class QuizStartSessionSerializer(serializers.Serializer):
+    start_session_time = serializers.DateTimeField()
+    session_id = serializers.IntegerField()
+    quiz = QuizSerializer()
 
 class QuizResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizResult
-        fields = ['id', 'user', 'quiz', 'correct_answers','total_questions', 'test_time']
+        fields = ['id', 'user', 'quiz', 'correct_answers','total_questions', 'quiz_time']
