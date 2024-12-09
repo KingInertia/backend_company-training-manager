@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.companies.models import CompanyMember
 
-from .models import Question, Quiz
+from .models import Question, Quiz, QuizResult, UserQuizPassing
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -129,3 +129,22 @@ class QuizSerializer(serializers.ModelSerializer):
             Question.objects.bulk_update(questions_to_update, ['text', 'answers', 'correct_answer'])
         
         return instance
+
+
+class QuizForUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Quiz
+        fields = ['id', 'title', 'description', 'created_at', 'frequency_days', 'company']
+        
+
+class UserQuizPassingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserQuizPassing
+        fields = ['id', 'user', 'quiz', 'status', 'start_test_time']
+        
+
+class QuizResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizResult
+        fields = ['id', 'user', 'quiz', 'correct_answers','total_questions', 'test_time']

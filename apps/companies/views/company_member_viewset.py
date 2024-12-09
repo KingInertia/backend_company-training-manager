@@ -117,10 +117,7 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
             admins = CompanyMember.objects.filter(company_id=company_id, role=CompanyMember.Role.ADMIN)
 
             if not admins.exists():
-                return Response(
-                    {"detail": "No administrators found for this company."},
-                    status=status.HTTP_404_NOT_FOUND
-                    )
+                return Response([], status=status.HTTP_200_OK)
 
             serializer = CompanyMemberSerializer(admins, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
