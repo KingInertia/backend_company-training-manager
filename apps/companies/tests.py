@@ -327,7 +327,7 @@ class CompanyRequestViewSetTests(APITestCase):
 
     def test_cancel_request_success(self):
         self.client.force_authenticate(user=self.sender)
-        url = f'/api/v1/requests/{self.request.pk}/cancelled/'
+        url = f'/api/v1/requests/{self.request.pk}/cancel/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_200_OK
         self.request.refresh_from_db()
@@ -335,7 +335,7 @@ class CompanyRequestViewSetTests(APITestCase):
 
     def test_cancel_request_by_non_sender(self):
         self.client.force_authenticate(user=self.receiver)
-        url = f'/api/v1/requests/{self.request.pk}/cancelled/'
+        url = f'/api/v1/requests/{self.request.pk}/cancel/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_403_FORBIDDEN
         self.request.refresh_from_db()
@@ -345,13 +345,13 @@ class CompanyRequestViewSetTests(APITestCase):
         self.client.force_authenticate(user=self.sender)
         self.request.status = CompanyRequest.RequestState.APPROVED
         self.request.save()
-        url = f'/api/v1/requests/{self.request.pk}/cancelled/'
+        url = f'/api/v1/requests/{self.request.pk}/cancel/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         
     def test_cancel_request_not_found(self):
         self.client.force_authenticate(user=self.sender)
-        url = '/api/v1/requests/999/cancelled/'
+        url = '/api/v1/requests/999/cancel/'
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_404_NOT_FOUND
         
@@ -658,21 +658,21 @@ class CompanyMemberViewSetTests(APITestCase):
 
     def test_is_member_of_company_success(self):
         self.client.force_authenticate(user=self.member)
-        url = f'/api/v1/company-members/is-member/?company={self.company.id}'
+        url = f'/api/v1/company-members/member-role/?company={self.company.id}'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["is_member"], True)
+        self.assertEqual(response.data["role"], CompanyMember.Role.MEMBER)
         
     def test_is_member_of_company_not_member(self):
         self.client.force_authenticate(user=self.other_user)
-        url = f'/api/v1/company-members/is-member/?company={self.company.id}'
+        url = f'/api/v1/company-members/member-role/?company={self.company.id}'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["is_member"], False)
+        self.assertIsNone(response.data["role"]) 
         
     def test_is_member_of_company_no_company_id(self):
         self.client.force_authenticate(user=self.member)
-        url = '/api/v1/company-members/is-member/'
+        url = '/api/v1/company-members/member-role/'
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         

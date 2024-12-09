@@ -158,16 +158,21 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         
         return Response(companies, status=status.HTTP_200_OK)
     
-    @action(detail=False, methods=['get'], url_path='is-member')
-    def is_member_of_company(self, request):
+    @action(detail=False, methods=['get'], url_path='member-role')
+    def member_role(self, request):
         company_id = request.query_params.get('company')
 
         if not company_id:
             return Response({"detail": "Company ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         is_member = CompanyMember.objects.filter(user=request.user, company=company_id).exists()
-
-        return Response({"is_member": is_member}, status=status.HTTP_200_OK)    
+        if not is_member:
+            return Response({"role": None}, status=status.HTTP_200_OK)
+        
+        member_role = CompanyMember.objects.filter(
+            user=request.user, company=company_id).values_list('role', flat=True).first()
+        
+        return Response({"role": member_role}, status=status.HTTP_200_OK)
     
 
     def list(self, request, *args, **kwargs):

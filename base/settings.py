@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
     'apps.companies.apps.CompaniesConfig',
+    'apps.quizzes.apps.QuizzesConfig'
 ]
 
 MIDDLEWARE = [
