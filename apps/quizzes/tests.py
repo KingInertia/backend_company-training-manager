@@ -200,8 +200,8 @@ class QuizTestCase(APITestCase):
         response_data = response.json()
         self.assertIn('session_id', response_data)
         self.assertIn('start_session_time', response_data)
-        quiz_data = response_data['quiz']
-        for question in quiz_data['questions']:
+        quiz_data = response_data['questions']
+        for question in quiz_data:
             self.assertEqual(question['correct_answer'], [])
             
     def test_complete_quiz_success(self):
@@ -213,10 +213,9 @@ class QuizTestCase(APITestCase):
         self.client.force_authenticate(user=self.user2)
         response = self.client.post(
             '/api/v1/quizzes/finish-quiz/', 
-            {'session': self.quiz_passing.id, 'questions': user_answers},
+            {'session': self.quiz_passing.id, 'answers': user_answers},
             format='json'
         )
-        print(f"Response content: {response.content.decode('utf-8')}")
  
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         quiz_result = QuizResult.objects.last()

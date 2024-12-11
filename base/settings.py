@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'djoser',
     'corsheaders',
+    'import_export',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
     'apps.companies.apps.CompaniesConfig',

@@ -132,10 +132,10 @@ class QuizSerializer(serializers.ModelSerializer):
 
 
 class QuizForUserSerializer(serializers.ModelSerializer):
-
+    
     class Meta:
         model = Quiz
-        fields = ['id', 'title', 'description', 'created_at', 'frequency_days', 'company']
+        fields = ['id', 'title', 'description', 'created_at', 'frequency_days']
         
 
 class UserQuizSessionSerializer(serializers.ModelSerializer):
@@ -147,7 +147,7 @@ class UserQuizSessionSerializer(serializers.ModelSerializer):
 class QuizStartSessionSerializer(serializers.Serializer):
     start_session_time = serializers.DateTimeField()
     session_id = serializers.IntegerField()
-    quiz = QuizSerializer()
+    questions = QuestionSerializer(many=True)
 
 class QuizResultSerializer(serializers.ModelSerializer):
     class Meta:
