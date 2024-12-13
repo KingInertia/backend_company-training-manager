@@ -1,5 +1,4 @@
 from django.db.models import Q
-from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -11,8 +10,8 @@ from apps.companies.models import Company, CompanyMember
 
 from .models import Quiz, QuizResult, UserQuizSession
 from .permissions import IsCompanyAdminOrOwner
-from .resources import QuizResultResource
 from .serializers import QuizForUserSerializer, QuizResultSerializer, QuizSerializer, QuizStartSessionSerializer
+from .utils import FileType, export_quiz_results
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -163,7 +162,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             user=user,
             quiz__company_id=company_id
         ).values('correct_answers', 'total_questions')
-        correct_questions_count= sum(result['correct_answers'] for result in company_quiz_results)
+        correct_questions_count = sum(result['correct_answers'] for result in company_quiz_results)
         questions_count = sum(result['total_questions'] for result in company_quiz_results)
 
         if questions_count:
@@ -182,7 +181,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         company_quiz_results = QuizResult.objects.filter(
             user=user,
         ).values('correct_answers', 'total_questions')
-        correct_questions_count= sum(result['correct_answers'] for result in company_quiz_results)
+        correct_questions_count = sum(result['correct_answers'] for result in company_quiz_results)
         questions_count = sum(result['total_questions'] for result in company_quiz_results)
 
         if questions_count:
@@ -224,16 +223,12 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response({"error": "quiz_id is required"}, status=400)
         
         try:
-            quiz_result = QuizResult.objects.filter(quiz__id =quiz_id, user=user).latest('created_at')
+            quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
         except QuizResult.DoesNotExist:
             return Response({"detail": "Result not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        result_data = QuizResultResource().export([quiz_result])
-        response = HttpResponse(result_data.csv)
-        response['Content-Disposition'] = 'attachment; filename="results.csv"'
+        return export_quiz_results([quiz_result], FileType.CSV)
 
-        return response
-    
     @action(detail=False, methods=['get'], url_path='export-result-json')
     def export_result_json(self, request):
         user = request.user
@@ -243,82 +238,54 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response({"error": "quiz_id is required"}, status=400)
         
         try:
-            quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')      
+            quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
         except QuizResult.DoesNotExist:
             return Response({"detail": "Result not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        result_data = QuizResultResource().export([quiz_result])
-        
-        data = [result_data.dict]
-        
-        response = HttpResponse(data, content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="results.json"'
+        return export_quiz_results([quiz_result], FileType.JSON)
 
-        return response
-
-
-    @action(detail=False, methods=['get'], url_path='company-results-csv', permission_classes=[ IsCompanyAdminOrOwner])
+    @action(detail=False, methods=['get'], url_path='company-results-csv', permission_classes=[IsCompanyAdminOrOwner])
     def export_company_results_csv(self, request):
         company_id = request.query_params.get('company_id')
 
         try:
-            quiz_results = QuizResult.objects.filter( quiz__company_id=company_id)
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id)
         except QuizResult.DoesNotExist:
             return Response({"detail": "Results not found."}, status=404)
-        
-        result_data = QuizResultResource().export(quiz_results)
-        response = HttpResponse(result_data.csv, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="company_results.csv"'
 
-        return response
+        return export_quiz_results(quiz_results, FileType.CSV)
 
-    @action(detail=False, methods=['get'], url_path='company-results-json', permission_classes=[ IsCompanyAdminOrOwner])
+    @action(detail=False, methods=['get'], url_path='company-results-json', permission_classes=[IsCompanyAdminOrOwner])
     def export_company_results_json(self, request):
         company_id = request.query_params.get('company_id')
 
         try:
-            quiz_results = QuizResult.objects.filter( quiz__company_id=company_id)
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id)
         except QuizResult.DoesNotExist:
             return Response({"detail": "Results not found."}, status=404)
-        
-        result_data = QuizResultResource().export(quiz_results)
-        data = [result_data.dict]
-        
-        response = HttpResponse(data, content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="company_results.json"'
 
-        return response
+        return export_quiz_results(quiz_results, FileType.JSON)
 
-    @action(detail=False, methods=['get'], url_path='user-results-csv', permission_classes=[ IsCompanyAdminOrOwner])
+    @action(detail=False, methods=['get'], url_path='user-results-csv', permission_classes=[IsCompanyAdminOrOwner])
     def export_user_results_csv(self, request):
         company_id = request.query_params.get('company_id')
         user_id = request.query_params.get('user_id')
 
         try:
-            quiz_results = QuizResult.objects.filter( quiz__company_id=company_id, user_id=user_id)
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id, user_id=user_id)
         except QuizResult.DoesNotExist:
             return Response({"detail": "Result not found."}, status=404)
-        
-        result_data = QuizResultResource().export(quiz_results)
 
-        response = HttpResponse(result_data.csv, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="user_results.csv"'
-
-        return response
+        return export_quiz_results(quiz_results, FileType.CSV)
     
-    @action(detail=False, methods=['get'], url_path='user-results-json', permission_classes=[ IsCompanyAdminOrOwner])
+    @action(detail=False, methods=['get'], url_path='user-results-json', permission_classes=[IsCompanyAdminOrOwner])
     def export_user_results_json(self, request):
         company_id = request.query_params.get('company_id')
         user_id = request.query_params.get('user_id')
 
         try:
-            quiz_results = QuizResult.objects.filter( quiz__company_id=company_id, user_id=user_id)
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id, user_id=user_id)
         except QuizResult.DoesNotExist:
             return Response({"detail": "Result not found."}, status=404)
-        
-        result_data = QuizResultResource().export(quiz_results)
-        data = [result_data.dict]
-        response = HttpResponse(data, content_type='application/json')
-        response['Content-Disposition'] = 'attachment; filename="user_results.json"'
 
-        return response
+        return export_quiz_results(quiz_results, FileType.JSON)

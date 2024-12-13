@@ -11,6 +11,7 @@ from .models import Question, Quiz, QuizResult, UserQuizSession
 
 User = get_user_model()
 
+
 class QuizTestCase(APITestCase):
 
     def setUp(self):
@@ -128,7 +129,7 @@ class QuizTestCase(APITestCase):
                     "answers": ["answers333", "answers111", "answers222"],
                     "correct_answer": ["answers333"]
                 },
-                {   
+                {
                     "text": "New Question",
                     "answers": ["answers1", "answers2", "answers3"],
                     "correct_answer": ["answers3"]
@@ -157,7 +158,6 @@ class QuizTestCase(APITestCase):
         
         assert not Question.objects.filter(id=self.question2.id).exists()
 
-
     def test_create_quiz_success(self):
         self.client.force_authenticate(user=self.user)
 
@@ -172,7 +172,7 @@ class QuizTestCase(APITestCase):
                     "answers": ["answers333", "answers111", "answers222"],
                     "correct_answer": ["answers333"]
                 },
-                {   
+                {
                     "text": "New Question",
                     "answers": ["answers1", "answers2", "answers3"],
                     "correct_answer": ["answers3"]

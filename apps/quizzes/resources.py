@@ -8,6 +8,7 @@ from .models import Quiz, QuizResult
 
 User = settings.AUTH_USER_MODEL
 
+
 class QuizResultResource(resources.ModelResource):
     company = fields.Field(
         column_name='company',
@@ -42,8 +43,3 @@ class QuizResultResource(resources.ModelResource):
     
     def dehydrate_date_passed(self, quiz_result):
         return quiz_result.created_at.strftime('%Y-%m-%d %H:%M:%S')
-
-
-
-
-

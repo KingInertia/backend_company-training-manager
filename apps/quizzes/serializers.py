@@ -16,6 +16,7 @@ class QuestionSerializer(serializers.ModelSerializer):
             'id': {'read_only': False, 'required': False},
         }
 
+
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True)
 
@@ -33,7 +34,7 @@ class QuizSerializer(serializers.ModelSerializer):
             user=user, company=company
             ).exists()
         
-        if(not is_admin_owner):
+        if (not is_admin_owner):
             raise serializers.ValidationError(("User is not Admin or Owner of company."))
         
         questions_data = validated_data.pop('questions')
@@ -149,7 +150,8 @@ class QuizStartSessionSerializer(serializers.Serializer):
     session_id = serializers.IntegerField()
     questions = QuestionSerializer(many=True)
 
+
 class QuizResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuizResult
-        fields = ['id', 'user', 'quiz', 'correct_answers','total_questions', 'quiz_time']
+        fields = ['id', 'user', 'quiz', 'correct_answers', 'total_questions', 'quiz_time']

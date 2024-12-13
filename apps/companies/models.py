@@ -41,7 +41,7 @@ class CompanyInvitation(TimeStampedModel):
     
     )
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
-    receiver= models.ForeignKey(
+    receiver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='received_invitations',
         on_delete=models.CASCADE
@@ -62,8 +62,8 @@ class CompanyInvitation(TimeStampedModel):
             raise ValidationError("Sender and receiver cannot be the same user.")    
 
     def save(self, *args, **kwargs):
-            self.clean()
-            super().save(*args, **kwargs)
+        self.clean()
+        super().save(*args, **kwargs)
     
     
 class CompanyRequest(TimeStampedModel):
@@ -79,7 +79,7 @@ class CompanyRequest(TimeStampedModel):
         on_delete=models.CASCADE
     
     )
-    receiver= models.ForeignKey(
+    receiver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='received_requests',
         on_delete=models.CASCADE
