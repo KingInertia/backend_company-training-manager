@@ -1,5 +1,7 @@
 from enum import Enum
+from typing import Union
 
+from django.db.models.query import QuerySet
 from django.http import HttpResponse
 
 from .resources import QuizResultResource
@@ -10,7 +12,7 @@ class FileType(Enum):
     JSON = 'json'
 
 
-def export_quiz_results(quiz_results, file_type: FileType):
+def export_quiz_results(quiz_results: Union[QuerySet, list], file_type: FileType):
     result_data = QuizResultResource().export(quiz_results)
 
     if file_type == FileType.CSV:

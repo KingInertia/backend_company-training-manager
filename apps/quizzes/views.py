@@ -214,78 +214,47 @@ class QuizViewSet(viewsets.ModelViewSet):
         serializer = QuizForUserSerializer(quiz, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='export-result-csv')
-    def export_result_csv(self, request):
+    @action(detail=False, methods=['get'], url_path='export-result')
+    def export_result(self, request):
         user = request.user
         quiz_id = request.query_params.get('quiz_id')
+        file_type = request.query_params.get('file_type')
         
         if quiz_id is None:
             return Response({"error": "quiz_id is required"}, status=400)
         
-        try:
-            quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
-        except QuizResult.DoesNotExist:
-            return Response({"detail": "Result not found."}, status=status.HTTP_404_NOT_FOUND)
+        if file_type not in ['csv', 'json']:
+            return Response({"error": "Unsupported type."}, status=400)
         
-        return export_quiz_results([quiz_result], FileType.CSV)
-
-    @action(detail=False, methods=['get'], url_path='export-result-json')
-    def export_result_json(self, request):
-        user = request.user
-        quiz_id = request.query_params.get('quiz_id')
+        quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
         
-        if quiz_id is None:
-            return Response({"error": "quiz_id is required"}, status=400)
+        if not quiz_result:
+            return Response({"detail": "Result not found."}, status=404)
         
-        try:
-            quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
-        except QuizResult.DoesNotExist:
-            return Response({"detail": "Result not found."}, status=status.HTTP_404_NOT_FOUND)
-        
-        return export_quiz_results([quiz_result], FileType.JSON)
+        return export_quiz_results([quiz_result], FileType[file_type.upper()])
 
-    @action(detail=False, methods=['get'], url_path='company-results-csv', permission_classes=[IsCompanyAdminOrOwner])
-    def export_company_results_csv(self, request):
-        company_id = request.query_params.get('company_id')
-
-        try:
-            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id)
-        except QuizResult.DoesNotExist:
-            return Response({"detail": "Results not found."}, status=404)
-
-        return export_quiz_results(quiz_results, FileType.CSV)
-
-    @action(detail=False, methods=['get'], url_path='company-results-json', permission_classes=[IsCompanyAdminOrOwner])
-    def export_company_results_json(self, request):
-        company_id = request.query_params.get('company_id')
-
-        try:
-            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id)
-        except QuizResult.DoesNotExist:
-            return Response({"detail": "Results not found."}, status=404)
-
-        return export_quiz_results(quiz_results, FileType.JSON)
-
-    @action(detail=False, methods=['get'], url_path='user-results-csv', permission_classes=[IsCompanyAdminOrOwner])
-    def export_user_results_csv(self, request):
+    @action(
+        detail=False, methods=['get'],
+        url_path='export-company-results',
+        permission_classes=[IsCompanyAdminOrOwner]
+        )
+    def export_company_results(self, request):
         company_id = request.query_params.get('company_id')
         user_id = request.query_params.get('user_id')
+        file_type = request.query_params.get('file_type', 'json')
 
-        try:
+        if not company_id:
+            return Response({"error": "company_id is required"}, status=400)
+
+        if file_type not in ['csv', 'json']:
+            return Response({"error": "Unsupported type."}, status=400)
+
+        if user_id:
             quiz_results = QuizResult.objects.filter(quiz__company_id=company_id, user_id=user_id)
-        except QuizResult.DoesNotExist:
+        else:
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id)
+            
+        if not quiz_results:
             return Response({"detail": "Result not found."}, status=404)
 
-        return export_quiz_results(quiz_results, FileType.CSV)
-    
-    @action(detail=False, methods=['get'], url_path='user-results-json', permission_classes=[IsCompanyAdminOrOwner])
-    def export_user_results_json(self, request):
-        company_id = request.query_params.get('company_id')
-        user_id = request.query_params.get('user_id')
-
-        try:
-            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id, user_id=user_id)
-        except QuizResult.DoesNotExist:
-            return Response({"detail": "Result not found."}, status=404)
-
-        return export_quiz_results(quiz_results, FileType.JSON)
+        return export_quiz_results(quiz_results, FileType[file_type.upper()])
