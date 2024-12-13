@@ -223,7 +223,9 @@ class QuizViewSet(viewsets.ModelViewSet):
         if quiz_id is None:
             return Response({"error": "quiz_id is required"}, status=400)
         
-        if file_type not in ['csv', 'json']:
+        try:
+            file_type = FileType(file_type)
+        except ValueError:
             return Response({"error": "Unsupported type."}, status=400)
         
         quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
@@ -231,7 +233,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         if not quiz_result:
             return Response({"detail": "Result not found."}, status=404)
         
-        return export_quiz_results([quiz_result], FileType[file_type.upper()])
+        return export_quiz_results([quiz_result], file_type)
 
     @action(
         detail=False, methods=['get'],
@@ -246,7 +248,9 @@ class QuizViewSet(viewsets.ModelViewSet):
         if not company_id:
             return Response({"error": "company_id is required"}, status=400)
 
-        if file_type not in ['csv', 'json']:
+        try:
+            file_type = FileType(file_type)
+        except ValueError:
             return Response({"error": "Unsupported type."}, status=400)
 
         if user_id:
@@ -257,4 +261,4 @@ class QuizViewSet(viewsets.ModelViewSet):
         if not quiz_results:
             return Response({"detail": "Result not found."}, status=404)
 
-        return export_quiz_results(quiz_results, FileType[file_type.upper()])
+        return export_quiz_results(quiz_results, file_type)
