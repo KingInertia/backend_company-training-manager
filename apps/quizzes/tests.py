@@ -11,6 +11,7 @@ from .models import Question, Quiz, QuizResult, UserQuizSession
 
 User = get_user_model()
 
+
 class QuizTestCase(APITestCase):
 
     def setUp(self):
@@ -128,7 +129,7 @@ class QuizTestCase(APITestCase):
                     "answers": ["answers333", "answers111", "answers222"],
                     "correct_answer": ["answers333"]
                 },
-                {   
+                {
                     "text": "New Question",
                     "answers": ["answers1", "answers2", "answers3"],
                     "correct_answer": ["answers3"]
@@ -157,7 +158,6 @@ class QuizTestCase(APITestCase):
         
         assert not Question.objects.filter(id=self.question2.id).exists()
 
-
     def test_create_quiz_success(self):
         self.client.force_authenticate(user=self.user)
 
@@ -172,7 +172,7 @@ class QuizTestCase(APITestCase):
                     "answers": ["answers333", "answers111", "answers222"],
                     "correct_answer": ["answers333"]
                 },
-                {   
+                {
                     "text": "New Question",
                     "answers": ["answers1", "answers2", "answers3"],
                     "correct_answer": ["answers3"]
@@ -200,8 +200,8 @@ class QuizTestCase(APITestCase):
         response_data = response.json()
         self.assertIn('session_id', response_data)
         self.assertIn('start_session_time', response_data)
-        quiz_data = response_data['quiz']
-        for question in quiz_data['questions']:
+        quiz_data = response_data['questions']
+        for question in quiz_data:
             self.assertEqual(question['correct_answer'], [])
             
     def test_complete_quiz_success(self):
@@ -213,10 +213,9 @@ class QuizTestCase(APITestCase):
         self.client.force_authenticate(user=self.user2)
         response = self.client.post(
             '/api/v1/quizzes/finish-quiz/', 
-            {'session': self.quiz_passing.id, 'questions': user_answers},
+            {'session': self.quiz_passing.id, 'answers': user_answers},
             format='json'
         )
-        print(f"Response content: {response.content.decode('utf-8')}")
  
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         quiz_result = QuizResult.objects.last()

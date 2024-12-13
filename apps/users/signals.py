@@ -7,12 +7,14 @@ from django.dispatch import receiver
 User = settings.AUTH_USER_MODEL
 logger = logging.getLogger("user_change")
 
+
 @receiver(post_save, sender=User)
 def log_user_save(sender, instance, created, **kwargs):
     if created:
         logger.info(f"User created: {instance.username}")
     else:
         logger.info(f"User updated: {instance.username}")
+
 
 @receiver(post_delete, sender=User)
 def log_user_delete(sender, instance, **kwargs):

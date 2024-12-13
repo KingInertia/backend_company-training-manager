@@ -30,10 +30,9 @@ class CompanyInvitationViewSetTests(APITestCase):
         self.company1 = Company.objects.create(
             name="Test1", 
             description="Test description", 
-            owner=self.owner,  
+            owner=self.owner, 
             visibility=Company.Visibility.VISIBLE  
         )
-        
         
         self.invitation1 = CompanyInvitation.objects.create(
             company=self.company1,
@@ -101,7 +100,6 @@ class CompanyInvitationViewSetTests(APITestCase):
         response = self.client.patch(url)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         
-
     def test_decline_invitation_by_non_receiver(self):
         self.client.force_authenticate(user=self.owner)     
         url = f'/api/v1/invitations/{self.invitation1.pk}/decline/'
@@ -206,7 +204,7 @@ class CompanyInvitationSerializerTests(APITestCase):
         self.company1 = Company.objects.create(
             name="Test1", 
             description="Test description", 
-            owner=self.owner,  
+            owner=self.owner, 
             visibility=Company.Visibility.VISIBLE  
         )
         
@@ -238,7 +236,7 @@ class CompanyInvitationSerializerTests(APITestCase):
         
     def test_create_invitation_already_processed(self):
         self.client.force_authenticate(user=self.owner)
-        existing_invitation = CompanyInvitation.objects.create( # noqa: F841
+        existing_invitation = CompanyInvitation.objects.create(  # noqa: F841
             sender=self.owner,
             receiver=self.receiver1,
             company=self.company1,
@@ -425,11 +423,10 @@ class CompanyRequestSerializerTests(APITestCase):
         self.company = Company.objects.create(
             name="TestCompany", 
             description="Test description", 
-            owner=self.receiver,  
+            owner=self.receiver, 
             visibility=Company.Visibility.VISIBLE
         )
         
-
     def test_create_request_success(self):
         self.client.force_authenticate(user=self.sender)
         data = {'company': self.company.pk}

@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'djoser',
     'corsheaders',
+    'import_export',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
     'apps.companies.apps.CompaniesConfig',
@@ -99,14 +100,14 @@ DATABASES = {
         'USER': os.getenv('POSTGRES_USER'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
         'HOST': os.getenv('POSTGRES_HOST'),
-        'PORT': '5432',       
+        'PORT': '5432', 
     }
 }
 
 CACHES = {
     "default": {
         "BACKEND": os.getenv("REDIS_BACKEND"),
-        "LOCATION": os.getenv("REDIS_HOST"),  
+        "LOCATION": os.getenv("REDIS_HOST"), 
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -131,8 +132,8 @@ LOGGING = {
             "level": os.getenv("DJANGO_LOG_LEVEL", "INFO"),
             "propagate": False,
         },
-        "user_change": {  
-            "handlers": ["console"],  
+        "user_change": {
+            "handlers": ["console"], 
             "level": "INFO",
             "propagate": False,
         },
@@ -199,10 +200,10 @@ DJOSER = {
         'USE_TLS': env.bool("EMAIL_USE_TLS"),
     },
     'SERIALIZERS': {
-        'user_detail': 'apps.users.serializers.UserSerializer',  
-        'current_user': 'apps.users.serializers.UserSerializer',  
+        'user_detail': 'apps.users.serializers.UserSerializer', 
+        'current_user': 'apps.users.serializers.UserSerializer', 
         'user_list': 'apps.users.serializers.UserListSerializer',
-        },    
+        }, 
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

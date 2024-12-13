@@ -16,7 +16,7 @@ class CompanyListSerializer (serializers.ModelSerializer):
     owner_name = serializers.CharField(source='owner.username', read_only=True)
     class Meta:
         model = Company
-        fields = ['id', 'name',  'created_at', 'description', 'visibility', 'owner', 'owner_name']
+        fields = ['id', 'name', 'created_at', 'description', 'visibility', 'owner', 'owner_name']
         
         
 class CompanyNamesSerializer(serializers.ModelSerializer):
@@ -34,7 +34,7 @@ class CompanyInvitationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyInvitation
         fields = ['id', 'sender', 'receiver', 'sender_name', 'receiver_name',
-                  'company_name','created_at', 'company', 'status']
+                  'company_name', 'created_at', 'company', 'status']
         
     def create(self, validated_data):
         sender = self.context['request'].user
@@ -50,10 +50,10 @@ class CompanyInvitationSerializer(serializers.ModelSerializer):
         existing_invitation = CompanyInvitation.objects.filter(
             receiver=receiver,
             company=company,
-            status = CompanyInvitation.InvitationState.PENDING
+            status=CompanyInvitation.InvitationState.PENDING
             ).exists()
 
-        if existing_invitation :
+        if existing_invitation:
             raise serializers.ValidationError(_("Invitation already processed."))
 
         invitation = CompanyInvitation.objects.create(
@@ -79,7 +79,7 @@ class CompanyRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyRequest
         fields = ['id', 'sender', 'receiver', 'sender_name', 'receiver_name',
-                  'company_name','created_at', 'company', 'status']
+                  'company_name', 'created_at', 'company', 'status']
 
     def create(self, validated_data):
         sender = self.context['request'].user
@@ -95,7 +95,7 @@ class CompanyRequestSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(_("Request already processed."))
     
         request = CompanyRequest.objects.create(
-            sender=sender,receiver=company.owner,
+            sender=sender, receiver=company.owner,
             company=company,
             status=CompanyRequest.RequestState.PENDING)
 

@@ -16,6 +16,7 @@ exclude = [
 target-version = "py312"
 line-length = 120
 indent-width = 4
+preview = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

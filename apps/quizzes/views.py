@@ -9,7 +9,9 @@ from rest_framework.response import Response
 from apps.companies.models import Company, CompanyMember
 
 from .models import Quiz, QuizResult, UserQuizSession
+from .permissions import IsCompanyAdminOrOwner
 from .serializers import QuizForUserSerializer, QuizResultSerializer, QuizSerializer, QuizStartSessionSerializer
+from .utils import FileType, export_quiz_results
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -58,7 +60,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             quizzes = Quiz.objects.filter(company__id=company_id).only(
-                'id', 'title', 'description', 'created_at', 'frequency_days', 'company'
+                'id', 'title', 'description', 'created_at', 'frequency_days'
                 )
             serializer = QuizForUserSerializer(quizzes, many=True, context={'request': request, 'role': role})
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -96,7 +98,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         response_data = QuizStartSessionSerializer({
             'start_session_time': quiz_session.start_session_time,
             'session_id': quiz_session.id,
-            'quiz': quiz
+            'questions': quiz.questions.all()
         }).data    
         
         return Response(response_data, status=status.HTTP_200_OK)
@@ -104,12 +106,12 @@ class QuizViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='finish-quiz')
     def finish_quiz(self, request):
         quiz_session_id = request.data.get('session')
-        user_answers = request.data.get('questions', [])
+        user_answers = request.data.get('answers', [])
         user = request.user
         end_time = timezone.now()
 
         if not quiz_session_id or not user_answers:
-            return Response({"detail": "Quiz session_id ID and questions are required."},
+            return Response({"detail": "Quiz session_id ID and answers are required."},
                             status=status.HTTP_400_BAD_REQUEST)
 
         if not UserQuizSession.objects.filter(id=quiz_session_id, user=user).exists():
@@ -160,7 +162,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             user=user,
             quiz__company_id=company_id
         ).values('correct_answers', 'total_questions')
-        correct_questions_count= sum(result['correct_answers'] for result in company_quiz_results)
+        correct_questions_count = sum(result['correct_answers'] for result in company_quiz_results)
         questions_count = sum(result['total_questions'] for result in company_quiz_results)
 
         if questions_count:
@@ -179,7 +181,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         company_quiz_results = QuizResult.objects.filter(
             user=user,
         ).values('correct_answers', 'total_questions')
-        correct_questions_count= sum(result['correct_answers'] for result in company_quiz_results)
+        correct_questions_count = sum(result['correct_answers'] for result in company_quiz_results)
         questions_count = sum(result['total_questions'] for result in company_quiz_results)
 
         if questions_count:
@@ -190,3 +192,73 @@ class QuizViewSet(viewsets.ModelViewSet):
         return Response({
             'user_average_score': round(average_score, 2)
         }, status=status.HTTP_200_OK)
+        
+    @action(detail=False, methods=['get'], url_path='quiz-info')
+    def quiz_info(self, request):
+        quiz_id = request.query_params.get('quiz')
+        user = self.request.user
+        
+        try:
+            quiz = Quiz.objects.filter(id=quiz_id).select_related('company').only(
+                'id', 'title', 'description', 'created_at', 'frequency_days', 'company__id'
+            ).first()
+        except Quiz.DoesNotExist:
+            return Response({"detail": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not CompanyMember.objects.filter(company=quiz.company.id, user=user).exists():
+            return Response(
+                {"detail": "User is not a member of this company."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = QuizForUserSerializer(quiz, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='export-result')
+    def export_result(self, request):
+        user = request.user
+        quiz_id = request.query_params.get('quiz_id')
+        file_type = request.query_params.get('file_type')
+        
+        if quiz_id is None:
+            return Response({"error": "quiz_id is required"}, status=400)
+        
+        try:
+            file_type = FileType(file_type)
+        except ValueError:
+            return Response({"error": "Unsupported type."}, status=400)
+        
+        quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
+        
+        if not quiz_result:
+            return Response({"detail": "Result not found."}, status=404)
+        
+        return export_quiz_results([quiz_result], file_type)
+
+    @action(
+        detail=False, methods=['get'],
+        url_path='export-company-results',
+        permission_classes=[IsCompanyAdminOrOwner]
+        )
+    def export_company_results(self, request):
+        company_id = request.query_params.get('company_id')
+        user_id = request.query_params.get('user_id')
+        file_type = request.query_params.get('file_type', 'json')
+
+        if not company_id:
+            return Response({"error": "company_id is required"}, status=400)
+
+        try:
+            file_type = FileType(file_type)
+        except ValueError:
+            return Response({"error": "Unsupported type."}, status=400)
+
+        if user_id:
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id, user_id=user_id)
+        else:
+            quiz_results = QuizResult.objects.filter(quiz__company_id=company_id)
+            
+        if not quiz_results:
+            return Response({"detail": "Result not found."}, status=404)
+
+        return export_quiz_results(quiz_results, file_type)

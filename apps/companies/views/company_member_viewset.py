@@ -15,7 +15,6 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
     serializer_class = CompanyMemberSerializer
     permission_classes = [IsAuthenticated]
     
-
     def get_permissions(self):
         owner_actions = ['kick_from_company', 'appoint_admin', 'remove_admin']
         member_actions = ['leave_company']
@@ -124,7 +123,6 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         except Company.DoesNotExist:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-
     @action(detail=False, methods=['get'], url_path='members')
     def list_members(self, request):
         company_id = request.query_params.get('company')
@@ -171,7 +169,6 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         
         return Response({"role": member_role}, status=status.HTTP_200_OK)
     
-
     def list(self, request, *args, **kwargs):
         return Response(
             {"detail": "This endpoint is not available.  Use the members endpoint instead."},
