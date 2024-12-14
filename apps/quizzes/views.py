@@ -1,5 +1,8 @@
-from django.db.models import Q
+from django.db.models import Q, Sum
+from django.db.models.functions import TruncDay
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.utils.timezone import make_aware
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -10,8 +13,16 @@ from apps.companies.models import Company, CompanyMember
 
 from .models import Quiz, QuizResult, UserQuizSession
 from .permissions import IsCompanyAdminOrOwner
-from .serializers import QuizForUserSerializer, QuizResultSerializer, QuizSerializer, QuizStartSessionSerializer
-from .utils import FileType, export_quiz_results
+from .serializers import (
+    DynamicScoreSerializer,
+    QuizForUserSerializer,
+    QuizLastCompletionSerializers,
+    QuizResultSerializer,
+    QuizSerializer,
+    QuizStartSessionSerializer,
+    UserLastCompletionSerializers,
+)
+from .utils import FileType, FilterType, export_quiz_results
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -174,12 +185,12 @@ class QuizViewSet(viewsets.ModelViewSet):
             'company_average_score': round(average_score, 2)
         }, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], url_path='user-score')
-    def user_average_score(self, request):
-        user = request.user
+    @action(detail=False, methods=['get'], url_path='user-rating')
+    def user_rating(self, request):
+        user_id = request.query_params.get('user_id')
 
         company_quiz_results = QuizResult.objects.filter(
-            user=user,
+            user=user_id,
         ).values('correct_answers', 'total_questions')
         correct_questions_count = sum(result['correct_answers'] for result in company_quiz_results)
         questions_count = sum(result['total_questions'] for result in company_quiz_results)
@@ -190,7 +201,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             average_score = 0
 
         return Response({
-            'user_average_score': round(average_score, 2)
+            'user_rating': round(average_score, 2)
         }, status=status.HTTP_200_OK)
         
     @action(detail=False, methods=['get'], url_path='quiz-info')
@@ -262,3 +273,110 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Result not found."}, status=404)
 
         return export_quiz_results(quiz_results, file_type)
+
+    @action(detail=False, methods=['get'], url_path='quiz-last-completions', permission_classes=[IsCompanyAdminOrOwner])
+    def quizzes_last_completions(self, request):
+        company_id = request.query_params.get('company_id')
+
+        if not company_id:
+            return Response({'error': 'company_id is required'}, status=400)
+        
+        quizzes = Quiz.objects.filter(company_id=company_id).values_list('id', flat=True)
+
+        quizzes_results = QuizResult.objects.filter(
+            quiz_id__in=quizzes
+            ).order_by('quiz_id', '-created_at').distinct('quiz_id')
+
+        serializer = QuizLastCompletionSerializers(quizzes_results, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'], url_path='dynamic-scores')
+    def dynamic_time_scores(self, request):
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        filter_type = request.query_params.get('type')
+        user_id = request.query_params.get('user_id')
+        
+        if not start_date or not end_date:
+            return Response({'error': 'start_date and end_date are required'}, status=400)
+        
+        if not filter_type and not user_id:
+            return Response({'error': 'filter_type or user_id are required'}, status=400)
+        
+        if filter_type:
+            try:
+                filter_type = FilterType(filter_type)
+                filter = filter_type.value
+            except ValueError:
+                return Response({"error": "Unsupported filter type."}, status=400)
+        try:
+            start_date = make_aware(parse_datetime(start_date))
+            end_date = make_aware(parse_datetime(end_date))
+        except ValueError:
+            return Response({'error': 'Invalid date format.'}, status=400)
+
+        if (user_id):
+            filter = FilterType.QUIZ.value
+            dynamic_scores = QuizResult.objects.filter(
+            created_at__range=[start_date, end_date], user=user_id
+            ).annotate(
+            day=TruncDay('created_at')
+            ).values(filter, 'day').annotate(
+            total_correct_answers=Sum('correct_answers'),
+            total_total_questions=Sum('total_questions')
+            ).order_by(filter, 'day')
+        else:    
+            dynamic_scores = QuizResult.objects.filter(
+            created_at__range=[start_date, end_date]
+            ).annotate(
+            day=TruncDay('created_at')
+            ).values(filter, 'day').annotate(
+            total_correct_answers=Sum('correct_answers'),
+            total_total_questions=Sum('total_questions')
+            ).order_by(filter, 'day')
+
+        if not dynamic_scores:
+            return Response({"error": "No data found for the given date range."}, status=404)
+        
+        dynamic_score = []
+        id_changed = None
+        index = -1
+
+        for record in dynamic_scores:
+            id = record[filter]
+            day = record['day']
+            total_correct_answers = record['total_correct_answers']
+            total_total_questions = record['total_total_questions']
+            score = round(total_correct_answers / total_total_questions, 2) * 100
+            
+            if id != id_changed:
+                dynamic_score.append({'id': id, 'dynamic_time': []})
+                id_changed = id
+                index += 1
+        
+            dynamic_score[index]['dynamic_time'].append({'day': day, 'average_score': score})
+            
+        serializer = DynamicScoreSerializer(dynamic_score, many=True)
+        
+        return Response(serializer.data)
+    
+    @action(
+        detail=False, methods=['get'],
+        url_path='users-last-completions',
+        permission_classes=[IsCompanyAdminOrOwner])
+    def users_last_completions(self, request):
+        company_id = request.query_params.get('company_id')
+
+        if not company_id:
+            return Response({'error': 'company_id is required'}, status=400)
+
+        users_id = CompanyMember.objects.filter(company_id=company_id).values_list('user_id', flat=True)
+        users_results = (
+            QuizResult.objects.filter(user_id__in=users_id, quiz__company=company_id)
+            .order_by('user_id', '-created_at')
+            .distinct('user_id')
+        )
+        serializer = UserLastCompletionSerializers(users_results, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    

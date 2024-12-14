@@ -10,6 +10,11 @@ from .resources import QuizResultResource
 class FileType(Enum):
     CSV = 'csv'
     JSON = 'json'
+    
+    
+class FilterType(Enum):
+    QUIZ = 'quiz'
+    USER = 'user'
 
 
 def export_quiz_results(quiz_results: Union[QuerySet, list], file_type: FileType):
