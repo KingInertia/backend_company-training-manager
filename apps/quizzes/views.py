@@ -294,19 +294,18 @@ class QuizViewSet(viewsets.ModelViewSet):
     def dynamic_time_scores(self, request):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
-        filter_type = request.query_params.get('type')
+        filter_by = request.query_params.get('type')
         user_id = request.query_params.get('user_id')
         
         if not start_date or not end_date:
             return Response({'error': 'start_date and end_date are required'}, status=400)
         
-        if not filter_type and not user_id:
+        if not filter_by and not user_id:
             return Response({'error': 'filter_type or user_id are required'}, status=400)
         
-        if filter_type:
+        if filter_by:
             try:
-                filter_type = FilterType(filter_type)
-                filter = filter_type.value
+                filter_by = FilterType(filter_by).value
             except ValueError:
                 return Response({"error": "Unsupported filter type."}, status=400)
         try:
@@ -316,24 +315,24 @@ class QuizViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid date format.'}, status=400)
 
         if (user_id):
-            filter = FilterType.QUIZ.value
+            filter_by = FilterType.QUIZ.value
             dynamic_scores = QuizResult.objects.filter(
             created_at__range=[start_date, end_date], user=user_id
             ).annotate(
             day=TruncDay('created_at')
-            ).values(filter, 'day').annotate(
+            ).values(filter_by, 'day').annotate(
             total_correct_answers=Sum('correct_answers'),
             total_total_questions=Sum('total_questions')
-            ).order_by(filter, 'day')
+            ).order_by(filter_by, 'day')
         else:    
             dynamic_scores = QuizResult.objects.filter(
             created_at__range=[start_date, end_date]
             ).annotate(
             day=TruncDay('created_at')
-            ).values(filter, 'day').annotate(
+            ).values(filter_by, 'day').annotate(
             total_correct_answers=Sum('correct_answers'),
             total_total_questions=Sum('total_questions')
-            ).order_by(filter, 'day')
+            ).order_by(filter_by, 'day')
 
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
@@ -343,7 +342,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         index = -1
 
         for record in dynamic_scores:
-            id = record[filter]
+            id = record[filter_by]
             day = record['day']
             total_correct_answers = record['total_correct_answers']
             total_total_questions = record['total_total_questions']
