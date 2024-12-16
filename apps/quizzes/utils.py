@@ -35,3 +35,26 @@ def export_quiz_results(quiz_results: Union[QuerySet, list], file_type: FileType
     response['Content-Disposition'] = f'attachment; filename="results.{type}"'
 
     return response
+
+
+def create_analitycs_data(dynamic_scores_data: Union[QuerySet], filter_by: FilterType):
+    dynamic_scores = []
+    id_changed = None
+    index = -1
+    filter_by = filter_by.value
+    
+    for record in dynamic_scores_data:
+        id = record[filter_by]
+        day = record['day']
+        total_correct_answers = record['total_correct_answers']
+        total_total_questions = record['total_total_questions']
+        score = round(total_correct_answers / total_total_questions, 2) * 100
+            
+        if id != id_changed:
+            dynamic_scores.append({'id': id, 'dynamic_time': []})
+            id_changed = id
+            index += 1
+        
+        dynamic_scores[index]['dynamic_time'].append({'day': day, 'average_score': score})
+    
+    return dynamic_scores

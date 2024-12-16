@@ -117,3 +117,11 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         raise serializers.ValidationError(_("Direct update of company members is not allowed."))
+    
+
+class AdminMemberSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    last_quiz = serializers.DateTimeField(required=False)
+    class Meta:
+        model = CompanyMember
+        fields = ['id', 'user_name', 'company', 'user', 'role', 'last_quiz']

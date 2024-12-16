@@ -163,7 +163,7 @@ class QuizLastCompletionSerializers(serializers.ModelSerializer):
     
     class Meta:
         model = QuizResult
-        fields = ['id', 'quiz', 'created_at', 'quiz_title']
+        fields = ['id', 'quiz', 'created_at', 'quiz_title', 'correct_answers', 'total_questions']
         
 
 class UserLastCompletionSerializers(serializers.ModelSerializer):
