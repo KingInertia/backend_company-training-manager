@@ -1,3 +1,4 @@
+from django.db.models import Subquery
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -9,7 +10,7 @@ from apps.quizzes.models import QuizResult
 
 from ..models import Company, CompanyMember
 from ..permission import IsMemberOfCompany, IsOwnerOfCompany
-from ..serializers import AdminMemberSerializer, CompanyMemberSerializer
+from ..serializers import CompanyMemberSerializer, MemberLastQuizSerializer
 
 
 class CompanyMemberViewSet(viewsets.ModelViewSet):
@@ -129,35 +130,33 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
     def list_members(self, request):
         company_id = request.query_params.get('company')
         user = request.user
-        
+
         if not company_id:
             return Response({"detail": "Company ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        visibility = Company.objects.filter(id=company_id).values_list('visibility', flat=True).first()
-        
-        if visibility is None:
+        visibility_and_role = CompanyMember.objects.filter(
+            user=user, company_id=company_id
+        ).select_related('company').values('company__visibility', 'role').first()
+
+        if visibility_and_role is None:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        role = CompanyMember.objects.filter(user=user, company_id=company_id).values_list('role', flat=True).first()
-        
+        visibility = visibility_and_role.get('company__visibility')
+        role = visibility_and_role.get('role')
+
         if visibility != Company.Visibility.VISIBLE and not role:
             raise PermissionDenied()
-        
-        if role == CompanyMember.Role.OWNER or role == CompanyMember.Role.ADMIN:
-            quiz_results = (QuizResult.objects.filter(quiz__company=company_id)
-                            .order_by('user', '-created_at')
-                            .distinct('user')
-                            .values('created_at', 'user'))
 
-            members = CompanyMember.objects.filter(company=company_id)
-            
-            for member in members:
-                for result in quiz_results:
-                    if result['user'] == member.user.id:
-                        member.last_quiz = result['created_at']
-                        break 
-            serializer = AdminMemberSerializer(members, many=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)            
+        if role == CompanyMember.Role.OWNER or role == CompanyMember.Role.ADMIN:
+            quiz_results = QuizResult.objects.filter(
+                quiz__company=company_id).order_by('user', '-created_at').distinct('user')
+
+            members = CompanyMember.objects.filter(company=company_id).annotate(
+                last_quiz=Subquery(quiz_results.values('created_at')[:1])
+            )
+
+            serializer = MemberLastQuizSerializer(members, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             members = CompanyMember.objects.filter(company=company_id)
             serializer = CompanyMemberSerializer(members, many=True)

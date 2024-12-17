@@ -1,20 +1,11 @@
-from enum import Enum
 from typing import Union
 
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
 
+from .enums import FileType
+from .models import QuizResult
 from .resources import QuizResultResource
-
-
-class FileType(Enum):
-    CSV = 'csv'
-    JSON = 'json'
-    
-    
-class FilterType(Enum):
-    QUIZ = 'quiz'
-    USER = 'user'
 
 
 def export_quiz_results(quiz_results: Union[QuerySet, list], file_type: FileType):
@@ -37,24 +28,78 @@ def export_quiz_results(quiz_results: Union[QuerySet, list], file_type: FileType
     return response
 
 
-def create_analitycs_data(dynamic_scores_data: Union[QuerySet], filter_by: FilterType):
-    dynamic_scores = []
-    id_changed = None
-    index = -1
-    filter_by = filter_by.value
-    
+def create_users_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
+    dynamic_scores = {}
+
     for record in dynamic_scores_data:
-        id = record[filter_by]
-        day = record['day']
-        total_correct_answers = record['total_correct_answers']
-        total_total_questions = record['total_total_questions']
-        score = round(total_correct_answers / total_total_questions, 2) * 100
-            
-        if id != id_changed:
-            dynamic_scores.append({'id': id, 'dynamic_time': []})
-            id_changed = id
-            index += 1
+        user_id = record['user__id']
+        date = record['created_at']
+        correct_answers = record['correct_answers']
+        total_questions = record['total_questions']
+
+        score = round((correct_answers / total_questions) * 100, 2)
+
+        if user_id not in dynamic_scores:
+            dynamic_scores[user_id] = {'scores': [], 'total_score': 0, 'count': 0}
+
+        dynamic_scores[user_id]['total_score'] += score
+        dynamic_scores[user_id]['count'] += 1
         
-        dynamic_scores[index]['dynamic_time'].append({'day': day, 'average_score': score})
-    
-    return dynamic_scores
+        average_score = round(dynamic_scores[user_id]['total_score'] / dynamic_scores[user_id]['count'], 2)
+        dynamic_scores[user_id]['scores'].append({'date': date, 'score': average_score})
+
+    response_data = []
+
+    for user_id, user_data in dynamic_scores.items():
+        response_data.append({'id': user_id, 'scores': user_data['scores']})
+
+    return response_data
+
+
+def create_user_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
+    quiz_scores = {}
+
+    for record in dynamic_scores_data:
+        quiz_id = record['quiz__id']
+        date = record['created_at']
+        correct_answers = record['correct_answers']
+        total_questions = record['total_questions']
+
+        score = round((correct_answers / total_questions) * 100, 2)
+
+        if quiz_id not in quiz_scores:
+            quiz_scores[quiz_id] = {'scores': [], 'total_score': 0, 'count': 0}
+
+        quiz_scores[quiz_id]['total_score'] += score
+        quiz_scores[quiz_id]['count'] += 1
+        
+        average_score = round(quiz_scores[quiz_id]['total_score'] / quiz_scores[quiz_id]['count'], 2)
+        quiz_scores[quiz_id]['scores'].append({'date': date, 'score': average_score})
+
+    response_data = []
+
+    for quiz_id, quiz_data in quiz_scores.items():
+        response_data.append({'id': quiz_id, 'scores': quiz_data['scores']})
+
+    return response_data
+
+
+def create_current_user_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
+    user_scores = []
+    total_score = 0
+    count = 0
+
+    for record in dynamic_scores_data:
+        date = record['created_at']
+        correct_answers = record['correct_answers']
+        total_questions = record['total_questions']
+
+        score = round((correct_answers / total_questions) * 100, 2)
+
+        total_score += score
+        count += 1
+
+        average_score = round(total_score / count, 2)
+        user_scores.append({'date': date, 'score': average_score})
+
+    return user_scores

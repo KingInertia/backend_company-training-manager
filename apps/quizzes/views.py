@@ -1,5 +1,4 @@
-from django.db.models import Q, Sum
-from django.db.models.functions import TruncDay
+from django.db.models import Max, Q, Sum
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import make_aware
@@ -11,18 +10,19 @@ from rest_framework.response import Response
 
 from apps.companies.models import Company, CompanyMember
 
+from .enums import FileType
 from .models import Quiz, QuizResult, UserQuizSession
 from .permissions import IsCompanyAdminOrOwner
 from .serializers import (
     DynamicScoreSerializer,
+    DynamicTimeScoreSerializer,
     QuizForUserSerializer,
     QuizLastCompletionSerializers,
     QuizResultSerializer,
     QuizSerializer,
     QuizStartSessionSerializer,
-    UserLastCompletionSerializers,
 )
-from .utils import FileType, FilterType, create_analitycs_data, export_quiz_results
+from .utils import create_current_user_analytics, create_user_analytics, create_users_analytics, export_quiz_results
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -189,14 +189,19 @@ class QuizViewSet(viewsets.ModelViewSet):
     def user_rating(self, request):
         user_id = request.query_params.get('user_id')
 
+        if not user_id:
+            return Response({'error': 'User ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    
         company_quiz_results = QuizResult.objects.filter(
-            user=user_id,
-        ).values('correct_answers', 'total_questions')
-        correct_questions_count = sum(result['correct_answers'] for result in company_quiz_results)
-        questions_count = sum(result['total_questions'] for result in company_quiz_results)
+            user=user_id
+            ).aggregate(
+            total_correct_answers=Sum('correct_answers'),
+            total_questions=Sum('total_questions')
+        )
 
-        if questions_count:
-            average_score = (correct_questions_count / questions_count) * 100
+        if company_quiz_results['total_questions']:
+            average_score = (
+                company_quiz_results['total_correct_answers'] / company_quiz_results['total_questions']) * 100
         else:
             average_score = 0
         return Response({
@@ -287,139 +292,121 @@ class QuizViewSet(viewsets.ModelViewSet):
 
         quizzes_results = QuizResult.objects.filter(
             quiz__in=quizzes
-            ).order_by('quiz', '-created_at').distinct('quiz')
+        ).values('quiz').annotate(last_completion=Max('created_at'))
 
         serializer = QuizLastCompletionSerializers(quizzes_results, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail=False, methods=['get'], url_path='dynamic-scores')
-    def dynamic_time_scores(self, request):
+    @action(detail=False, methods=['get'], url_path='users-dynamic-scores', permission_classes=[IsCompanyAdminOrOwner])
+    def users_dynamic_scores(self, request):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
-        filter_by = request.query_params.get('type')
+        company_id = request.query_params.get('company_id')
         
-        if not start_date or not end_date:
-            return Response({'error': 'start_date and end_date are required'}, status=400)
-        
-        if not filter_by:
-            return Response({'error': 'filter_type are required quiz or user'}, status=400)
-        
-        if filter_by:
-            try:
-                filter_by = FilterType(filter_by).value
-            except ValueError:
-                return Response({"error": "Unsupported filter type."}, status=400)
         try:
-            start_date = make_aware(parse_datetime(start_date))
-            end_date = make_aware(parse_datetime(end_date))
+            if not start_date:
+                create_date = Company.objects.filter(id=company_id).values('created_at').first()
+                start_date = create_date['created_at']
+                if not create_date:
+                    return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                company_exist = Company.objects.filter(id=company_id)
+                if not company_exist:
+                    return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+                start_date = make_aware(parse_datetime(start_date))
+
+            if not end_date:
+                end_date = timezone.now()
+            else: 
+                end_date = make_aware(parse_datetime(end_date))
         except ValueError:
             return Response({'error': 'Invalid date format.'}, status=400)
   
         dynamic_scores = QuizResult.objects.filter(
-        created_at__range=[start_date, end_date]
-        ).annotate(
-        day=TruncDay('created_at')
-        ).values(filter_by, 'day').annotate(
-        total_correct_answers=Sum('correct_answers'),
-        total_total_questions=Sum('total_questions')
-        ).order_by(filter_by, 'day')
-
-        if not dynamic_scores:
-            return Response({"error": "No data found for the given date range."}, status=404)
-        
-        serializer = DynamicScoreSerializer(create_analitycs_data(dynamic_scores, FilterType(filter_by)), many=True)
-        
-        return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'], url_path='user-dynamic-scores')
-    def user_dynamic_scores(self, request):
-        user = request.user
-        start_date = user.created_at
-        end_date = timezone.now()
-        
-        filter_by = FilterType.QUIZ.value
-        dynamic_scores = QuizResult.objects.filter(
-        created_at__range=[start_date, end_date], user=user, 
-        ).annotate(
-        day=TruncDay('created_at')
-        ).values(filter_by, 'day').annotate(
-        total_correct_answers=Sum('correct_answers'),
-        total_total_questions=Sum('total_questions')
-        ).order_by(filter_by, 'day')
-
-        if not dynamic_scores:
-            return Response({"error": "No data found for the given date range."}, status=404)
-        
-        serializer = DynamicScoreSerializer(create_analitycs_data(dynamic_scores, FilterType(filter_by)), many=True)
-        
-        return Response(serializer.data)
-    
-    @action(
-        detail=False, methods=['get'],
-        url_path='users-last-completions',
-        permission_classes=[IsCompanyAdminOrOwner])
-    def users_last_completions(self, request):
-        company_id = request.query_params.get('company_id')
-
-        if not company_id:
-            return Response({'error': 'company_id is required'}, status=400)
-        
-        if not Company.objects.filter(id=company_id).exists():
-            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        users_id = CompanyMember.objects.filter(company_id=company_id).values_list('user', flat=True)
-        users_results = (
-            QuizResult.objects.filter(user__in=users_id, quiz__company=company_id)
-            .order_by('user', '-created_at')
-            .distinct('user')
-        )
-        serializer = UserLastCompletionSerializers(users_results, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    @action(
-        detail=False,
-        methods=['get'],
-        url_path='company-dynamic-scores',
-        permission_classes=[IsCompanyAdminOrOwner])
-    def company_time_scores(self, request):
-        user_id = request.query_params.get('user_id')
-        company_id = request.query_params.get('company_id')
-
-        if not company_id:
-            return Response({'error': 'company_id is required'}, status=400)
-        
-        create_date = Company.objects.filter(id=company_id).values('created_at').first()
-        if not create_date:
-            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-        start_date = create_date['created_at']
-        end_date = timezone.now()
-
-        if (user_id):
-            filter_by = FilterType.QUIZ.value
-            dynamic_scores = QuizResult.objects.filter(
-            created_at__range=[start_date, end_date], user=user_id, quiz__company=company_id
-            ).annotate(
-            day=TruncDay('created_at')
-            ).values(filter_by, 'day').annotate(
-            total_correct_answers=Sum('correct_answers'),
-            total_total_questions=Sum('total_questions')
-            ).order_by(filter_by, 'day')
-        else:
-            filter_by = FilterType.USER.value
-            dynamic_scores = QuizResult.objects.filter(
             created_at__range=[start_date, end_date], quiz__company=company_id
-            ).annotate(
-            day=TruncDay('created_at')
-            ).values(filter_by, 'day').annotate(
-            total_correct_answers=Sum('correct_answers'),
-            total_total_questions=Sum('total_questions')
-            ).order_by(filter_by, 'day')
+        ).values(
+            'user__id', 'created_at', 'correct_answers', 'total_questions'
+        )      
 
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
         
-        serializer = DynamicScoreSerializer(create_analitycs_data(dynamic_scores, FilterType(filter_by)), many=True)
+        serializer = DynamicScoreSerializer(create_users_analytics(dynamic_scores), many=True)
         
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='user-dynamic-scores', permission_classes=[IsCompanyAdminOrOwner])
+    def user_dynamic_scores(self, request):
+        user_id = request.query_params.get('user_id')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        company_id = request.query_params.get('company_id')
+        
+        if not user_id:
+            return Response({"error": "user_id is required"}, status=400)
+        
+        try:
+            if not start_date:
+                create_date = Company.objects.filter(id=company_id).values('created_at').first()
+                start_date = create_date['created_at']
+                if not create_date:
+                    return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                company_exist = Company.objects.filter(id=company_id)
+                if not company_exist:
+                    return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+                start_date = make_aware(parse_datetime(start_date))
+
+            if not end_date:
+                end_date = timezone.now()
+            else: 
+                end_date = make_aware(parse_datetime(end_date))
+        except ValueError:
+            return Response({'error': 'Invalid date format.'}, status=400)
+        
+        dynamic_scores = QuizResult.objects.filter(
+            created_at__range=[start_date, end_date], user=user_id, quiz__company=company_id
+        ).values(
+            'quiz__id', 'created_at', 'correct_answers', 'total_questions'
+        )
+
+        if not dynamic_scores:
+            return Response({"error": "No data found for the given date range."}, status=404)
+
+        serializer = DynamicScoreSerializer(create_user_analytics(dynamic_scores), many=True)
+
+        return Response(serializer.data)    
+    
+    @action(detail=False, methods=['get'], url_path='current-user-dynamic-scores')
+    def current_user_dynamic_scores(self, request):
+        user = request.user
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        try:
+            if not start_date:
+                start_date = user.created_at
+            else:
+                start_date = make_aware(parse_datetime(start_date))
+
+            if not end_date:
+                end_date = timezone.now()
+            else: 
+                end_date = make_aware(parse_datetime(end_date))
+        except ValueError:
+            return Response({'error': 'Invalid date format.'}, status=400)
+        
+        dynamic_scores = QuizResult.objects.filter(
+            created_at__range=[start_date, end_date], user=user
+        ).values(
+            'created_at', 'correct_answers', 'total_questions'
+        )
+
+        if not dynamic_scores:
+            return Response({"error": "No data found for the given date range."}, status=404)
+        
+        serializer = DynamicTimeScoreSerializer(create_current_user_analytics(dynamic_scores), many=True)
+
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'], url_path='user-last-completions')
