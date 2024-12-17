@@ -326,7 +326,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             created_at__range=[start_date, end_date], quiz__company=company_id
         ).values(
             'user__id', 'created_at', 'correct_answers', 'total_questions'
-        )      
+        ).order_by('created_at')      
 
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
@@ -368,7 +368,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             created_at__range=[start_date, end_date], user=user_id, quiz__company=company_id
         ).values(
             'quiz__id', 'created_at', 'correct_answers', 'total_questions'
-        )
+        ).order_by('created_at')
 
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
@@ -400,7 +400,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             created_at__range=[start_date, end_date], user=user
         ).values(
             'created_at', 'correct_answers', 'total_questions'
-        )
+        ).order_by('created_at')
 
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
