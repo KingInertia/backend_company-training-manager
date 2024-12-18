@@ -134,15 +134,15 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         if not company_id:
             return Response({"detail": "Company ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        visibility_and_role = CompanyMember.objects.filter(
+        member_info = CompanyMember.objects.filter(
             user=user, company_id=company_id
         ).select_related('company').values('company__visibility', 'role').first()
 
-        if visibility_and_role is None:
+        if member_info is None:
             return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        visibility = visibility_and_role.get('company__visibility')
-        role = visibility_and_role.get('role')
+        visibility = member_info .get('company__visibility')
+        role = member_info .get('role')
 
         if visibility != Company.Visibility.VISIBLE and not role:
             raise PermissionDenied()

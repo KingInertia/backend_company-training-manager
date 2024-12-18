@@ -56,7 +56,7 @@ def create_users_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
     return response_data
 
 
-def create_user_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
+def create_quizzes_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
     quiz_scores = {}
 
     for record in dynamic_scores_data:

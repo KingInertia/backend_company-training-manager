@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from apps.companies.models import Company, CompanyMember
 
-from .enums import FileType
+from .enums import FileType, ScoresType
 from .models import Quiz, QuizResult, UserQuizSession
 from .permissions import IsCompanyAdminOrOwner
 from .serializers import (
@@ -22,7 +22,7 @@ from .serializers import (
     QuizSerializer,
     QuizStartSessionSerializer,
 )
-from .utils import create_current_user_analytics, create_user_analytics, create_users_analytics, export_quiz_results
+from .utils import create_current_user_analytics, create_quizzes_analytics, create_users_analytics, export_quiz_results
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -302,6 +302,12 @@ class QuizViewSet(viewsets.ModelViewSet):
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
         company_id = request.query_params.get('company_id')
+        scores_type = request.query_params.get('scores_type')
+        
+        try:
+            scores_type = ScoresType(scores_type)
+        except ValueError:
+            return Response({"error": "Missing or unsupported scores type."}, status=400)
         
         try:
             if not start_date:
@@ -325,57 +331,18 @@ class QuizViewSet(viewsets.ModelViewSet):
         dynamic_scores = QuizResult.objects.filter(
             created_at__range=[start_date, end_date], quiz__company=company_id
         ).values(
-            'user__id', 'created_at', 'correct_answers', 'total_questions'
+            f"{scores_type.value}__id", 'created_at', 'correct_answers', 'total_questions'
         ).order_by('created_at')      
 
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
         
-        serializer = DynamicScoreSerializer(create_users_analytics(dynamic_scores), many=True)
-        
+        if (scores_type.value == ScoresType.USER.value):
+            serializer = DynamicScoreSerializer(create_users_analytics(dynamic_scores), many=True)
+        else:
+            serializer = DynamicScoreSerializer(create_quizzes_analytics(dynamic_scores), many=True)
+
         return Response(serializer.data)
-    
-    @action(detail=False, methods=['get'], url_path='user-dynamic-scores', permission_classes=[IsCompanyAdminOrOwner])
-    def user_dynamic_scores(self, request):
-        user_id = request.query_params.get('user_id')
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        company_id = request.query_params.get('company_id')
-        
-        if not user_id:
-            return Response({"error": "user_id is required"}, status=400)
-        
-        try:
-            if not start_date:
-                create_date = Company.objects.filter(id=company_id).values('created_at').first()
-                start_date = create_date['created_at']
-                if not create_date:
-                    return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-            else:
-                company_exist = Company.objects.filter(id=company_id)
-                if not company_exist:
-                    return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-                start_date = make_aware(parse_datetime(start_date))
-
-            if not end_date:
-                end_date = timezone.now()
-            else: 
-                end_date = make_aware(parse_datetime(end_date))
-        except ValueError:
-            return Response({'error': 'Invalid date format.'}, status=400)
-        
-        dynamic_scores = QuizResult.objects.filter(
-            created_at__range=[start_date, end_date], user=user_id, quiz__company=company_id
-        ).values(
-            'quiz__id', 'created_at', 'correct_answers', 'total_questions'
-        ).order_by('created_at')
-
-        if not dynamic_scores:
-            return Response({"error": "No data found for the given date range."}, status=404)
-
-        serializer = DynamicScoreSerializer(create_user_analytics(dynamic_scores), many=True)
-
-        return Response(serializer.data)    
     
     @action(detail=False, methods=['get'], url_path='current-user-dynamic-scores')
     def current_user_dynamic_scores(self, request):
