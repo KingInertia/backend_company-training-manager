@@ -3,7 +3,7 @@ from typing import Union
 from django.db.models.query import QuerySet
 from django.http import HttpResponse
 
-from .enums import FileType
+from .enums import FileType, ScoreIdType
 from .models import QuizResult
 from .resources import QuizResultResource
 
@@ -28,58 +28,30 @@ def export_quiz_results(quiz_results: Union[QuerySet, list], file_type: FileType
     return response
 
 
-def create_users_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
+def create_users_analytics(dynamic_scores_data: QuerySet[QuizResult], id_type: ScoreIdType) -> list:
     dynamic_scores = {}
 
     for record in dynamic_scores_data:
-        user_id = record['user__id']
+        group_id = record[id_type.value]
         date = record['created_at']
         correct_answers = record['correct_answers']
         total_questions = record['total_questions']
 
         score = round((correct_answers / total_questions) * 100, 2)
 
-        if user_id not in dynamic_scores:
-            dynamic_scores[user_id] = {'scores': [], 'total_score': 0, 'count': 0}
+        if group_id not in dynamic_scores:
+            dynamic_scores[group_id] = {'scores': [], 'total_score': 0, 'count': 0}
 
-        dynamic_scores[user_id]['total_score'] += score
-        dynamic_scores[user_id]['count'] += 1
-        
-        average_score = round(dynamic_scores[user_id]['total_score'] / dynamic_scores[user_id]['count'], 2)
-        dynamic_scores[user_id]['scores'].append({'date': date, 'score': average_score})
+        dynamic_scores[group_id]['total_score'] += score
+        dynamic_scores[group_id]['count'] += 1
 
-    response_data = []
-
-    for user_id, user_data in dynamic_scores.items():
-        response_data.append({'id': user_id, 'scores': user_data['scores']})
-
-    return response_data
-
-
-def create_quizzes_analytics(dynamic_scores_data: QuerySet[QuizResult]) -> list:
-    quiz_scores = {}
-
-    for record in dynamic_scores_data:
-        quiz_id = record['quiz__id']
-        date = record['created_at']
-        correct_answers = record['correct_answers']
-        total_questions = record['total_questions']
-
-        score = round((correct_answers / total_questions) * 100, 2)
-
-        if quiz_id not in quiz_scores:
-            quiz_scores[quiz_id] = {'scores': [], 'total_score': 0, 'count': 0}
-
-        quiz_scores[quiz_id]['total_score'] += score
-        quiz_scores[quiz_id]['count'] += 1
-        
-        average_score = round(quiz_scores[quiz_id]['total_score'] / quiz_scores[quiz_id]['count'], 2)
-        quiz_scores[quiz_id]['scores'].append({'date': date, 'score': average_score})
+        average_score = round(dynamic_scores[group_id]['total_score'] / dynamic_scores[group_id]['count'], 2)
+        dynamic_scores[group_id]['scores'].append({'date': date, 'score': average_score})
 
     response_data = []
 
-    for quiz_id, quiz_data in quiz_scores.items():
-        response_data.append({'id': quiz_id, 'scores': quiz_data['scores']})
+    for group_id, group_data in dynamic_scores.items():
+        response_data.append({'id': group_id, 'scores': group_data['scores']})
 
     return response_data
 

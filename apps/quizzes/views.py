@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from apps.companies.models import Company, CompanyMember
 
-from .enums import FileType
+from .enums import FileType, ScoreIdType
 from .models import Quiz, QuizResult, UserQuizSession
 from .permissions import IsCompanyAdminOrOwner
 from .serializers import (
@@ -22,7 +22,7 @@ from .serializers import (
     QuizSerializer,
     QuizStartSessionSerializer,
 )
-from .utils import create_current_user_analytics, create_quizzes_analytics, create_users_analytics, export_quiz_results
+from .utils import create_current_user_analytics, create_users_analytics, export_quiz_results
 
 
 class QuizViewSet(viewsets.ModelViewSet):
@@ -303,13 +303,13 @@ class QuizViewSet(viewsets.ModelViewSet):
         end_date = request.query_params.get('end_date')
         company_id = request.query_params.get('company_id')
         user_id = request.query_params.get('user_id')
-        
+
         try:
             if not start_date:
                 create_date = Company.objects.filter(id=company_id).values('created_at').first()
-                start_date = create_date['created_at']
                 if not create_date:
                     return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+                start_date = create_date['created_at']
             else:
                 company_exist = Company.objects.filter(id=company_id)
                 if not company_exist:
@@ -318,24 +318,24 @@ class QuizViewSet(viewsets.ModelViewSet):
 
             if not end_date:
                 end_date = timezone.now()
-            else: 
+            else:
                 end_date = make_aware(parse_datetime(end_date))
         except ValueError:
             return Response({'error': 'Invalid date format.'}, status=400)
-        
+
         filters = {
             'created_at__range': [start_date, end_date],
             'quiz__company': company_id,
         }
-        
+
         if user_id:
             filters['user__id'] = user_id
-            scores_type = 'quiz'
+            scores_type = ScoreIdType.QUIZ
         else:
-            scores_type = 'user'
-            
+            scores_type = ScoreIdType.USER
+
         dynamic_scores = QuizResult.objects.filter(**filters).values(
-            f"{scores_type}__id",
+            scores_type.value,
             'created_at',
             'correct_answers',
             'total_questions',
@@ -344,10 +344,8 @@ class QuizViewSet(viewsets.ModelViewSet):
         if not dynamic_scores:
             return Response({"error": "No data found for the given date range."}, status=404)
 
-        if not user_id:
-            serializer = DynamicScoreSerializer(create_users_analytics(dynamic_scores), many=True)
-        else:
-            serializer = DynamicScoreSerializer(create_quizzes_analytics(dynamic_scores), many=True)
+        analytics_data = create_users_analytics(dynamic_scores, scores_type)
+        serializer = DynamicScoreSerializer(analytics_data, many=True)
 
         return Response(serializer.data)
     
