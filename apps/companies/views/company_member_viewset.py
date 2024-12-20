@@ -1,3 +1,4 @@
+from django.db.models import Subquery
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -5,9 +6,11 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.quizzes.models import QuizResult
+
 from ..models import Company, CompanyMember
 from ..permission import IsMemberOfCompany, IsOwnerOfCompany
-from ..serializers import CompanyMemberSerializer
+from ..serializers import CompanyMemberSerializer, MemberLastQuizSerializer
 
 
 class CompanyMemberViewSet(viewsets.ModelViewSet):
@@ -126,25 +129,39 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='members')
     def list_members(self, request):
         company_id = request.query_params.get('company')
+        user = request.user
 
         if not company_id:
             return Response({"detail": "Company ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            company = Company.objects.get(id=company_id)
+        member_info = CompanyMember.objects.filter(
+            user=user, company_id=company_id
+        ).select_related('company').values('company__visibility', 'role').first()
 
-            if company.visibility != Company.Visibility.VISIBLE:
-                is_owner_or_member = CompanyMember.objects.filter(company=company, user=request.user).exists()
-                if not is_owner_or_member and company.owner != request.user:
-                    raise PermissionDenied()
+        if member_info is None:
+            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            members = CompanyMember.objects.filter(company=company)
+        visibility = member_info .get('company__visibility')
+        role = member_info .get('role')
+
+        if visibility != Company.Visibility.VISIBLE and not role:
+            raise PermissionDenied()
+
+        if role == CompanyMember.Role.OWNER or role == CompanyMember.Role.ADMIN:
+            quiz_results = QuizResult.objects.filter(
+                quiz__company=company_id).order_by('user', '-created_at').distinct('user')
+
+            members = CompanyMember.objects.filter(company=company_id).annotate(
+                last_quiz=Subquery(quiz_results.values('created_at')[:1])
+            )
+
+            serializer = MemberLastQuizSerializer(members, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            members = CompanyMember.objects.filter(company=company_id)
             serializer = CompanyMemberSerializer(members, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        except Company.DoesNotExist:
-            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
-        
     @action(detail=False, methods=['get'], url_path='user-memberships')
     def user_memberships(self, request):
         user = request.user

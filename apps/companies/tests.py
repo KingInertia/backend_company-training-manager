@@ -632,7 +632,7 @@ class CompanyMemberViewSetTests(APITestCase):
         self.client.force_authenticate(user=self.other_user)
         url = '/api/v1/company-members/members/?company=' + str(self.company2.id)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         
     def test_create_company_member_not_allowed(self):
         self.client.force_authenticate(user=self.owner)

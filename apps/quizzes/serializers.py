@@ -152,6 +152,26 @@ class QuizStartSessionSerializer(serializers.Serializer):
 
 
 class QuizResultSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = QuizResult
         fields = ['id', 'user', 'quiz', 'correct_answers', 'total_questions', 'quiz_time']
+        
+        
+class QuizLastCompletionSerializers(serializers.ModelSerializer):
+    quiz_title = serializers.CharField(source='quiz.title', read_only=True)
+    
+    class Meta:
+        model = QuizResult
+        fields = ['id', 'quiz', 'created_at', 'quiz_title', 'correct_answers', 'total_questions']
+        
+
+class DynamicTimeScoreSerializer(serializers.Serializer):
+    date = serializers.DateTimeField()
+    score = serializers.FloatField()
+
+
+class DynamicScoreSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    company_id = serializers.IntegerField(required=False)
+    scores = DynamicTimeScoreSerializer(many=True)

@@ -237,7 +237,7 @@ class QuizTestCase(APITestCase):
 
     def test_user_score(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/v1/quizzes/user-score/')
+        response = self.client.get(f'/api/v1/quizzes/user-rating/?user_id={self.user.id}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         total_correct = (self.user_quiz1_result.correct_answers + 
                          self.user_quiz2_result.correct_answers +
@@ -246,4 +246,96 @@ class QuizTestCase(APITestCase):
                            self.user_quiz2_result.total_questions +
                            self.user_quiz3_result.total_questions)
         expected_average_score = (total_correct / total_questions) * 100
-        self.assertEqual(response.data['user_average_score'], round(expected_average_score, 2))
+        self.assertEqual(response.data['user_rating'], round(expected_average_score, 2))
+
+
+class AnaliticTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="admin",
+            password="1Q_az_2wsx_3edc",
+            email="owner@example.com"
+        )
+        
+        self.user2 = User.objects.create_user(
+            username="user",
+            password="1Q_az_2wsx_3edc",
+            email="user@example.com"
+        )
+        
+        self.company = Company.objects.create(
+            name="Company 1", 
+            description="description",
+            owner=self.user
+        )
+        
+        self.company2 = Company.objects.create(
+            name="Company 2", 
+            description="description", 
+            owner=self.user
+        )
+
+        CompanyMember.objects.create(user=self.user, company=self.company, role=CompanyMember.Role.ADMIN)
+        CompanyMember.objects.create(user=self.user2, company=self.company, role=CompanyMember.Role.MEMBER)
+        
+        self.quiz1 = Quiz.objects.create(
+            title="Quiz 1",
+            description="description",
+            frequency_days=1,
+            company=self.company
+        )
+        
+        self.quiz2 = Quiz.objects.create(
+            title="Quiz 2",
+            description="description",
+            frequency_days=1,
+            company=self.company2
+        )
+
+        self.user_quiz_result1 = QuizResult.objects.create(
+            user=self.user,
+            quiz=self.quiz1,
+            correct_answers=8,
+            total_questions=10,
+            quiz_time=timedelta(minutes=15)
+        )
+
+        self.user_quiz_result2 = QuizResult.objects.create(
+            user=self.user,
+            quiz=self.quiz2,
+            correct_answers=7,
+            total_questions=10,
+            quiz_time=timedelta(minutes=15)
+        )
+
+        self.user_quiz_result3 = QuizResult.objects.create(
+            user=self.user2,
+            quiz=self.quiz1,
+            correct_answers=9,
+            total_questions=10,
+            quiz_time=timedelta(minutes=20)
+        )
+
+        self.user_quiz_result4 = QuizResult.objects.create(
+            user=self.user2,
+            quiz=self.quiz2,
+            correct_answers=6,
+            total_questions=10,
+            quiz_time=timedelta(minutes=10)
+        )
+
+        self.user_quiz_result5 = QuizResult.objects.create(
+            user=self.user,
+            quiz=self.quiz1,
+            correct_answers=6,
+            total_questions=10,
+            quiz_time=timedelta(minutes=20)
+        )
+
+        self.user_quiz_result6 = QuizResult.objects.create(
+            user=self.user2,
+            quiz=self.quiz2,
+            correct_answers=8,
+            total_questions=10,
+            quiz_time=timedelta(minutes=18)
+        )
