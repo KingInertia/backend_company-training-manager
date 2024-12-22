@@ -2,6 +2,8 @@ from django.db.models import Q
 from rest_framework import serializers
 
 from apps.companies.models import CompanyMember
+from apps.notifications.models import Notification
+from apps.notifications.utils import send_notifications
 
 from .models import Question, Quiz, QuizResult, UserQuizSession
 
@@ -61,7 +63,20 @@ class QuizSerializer(serializers.ModelSerializer):
             questions.append(question)
 
         Question.objects.bulk_create(questions)
-    
+        
+        members = CompanyMember.objects.filter(company_id=company).select_related('user').only('user')
+        
+        notifications = [
+            Notification(
+                user=member.user,
+                text=f"New quiz '{quiz.title}' now avalible in company {quiz.company.name}!",
+            )
+            for member in members
+        ]
+
+        Notification.objects.bulk_create(notifications)
+        send_notifications(notifications)
+        
         return quiz
 
     def update(self, instance, validated_data):

@@ -232,18 +232,18 @@ class QuizViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='export-result')
     def export_result(self, request):
         user = request.user
-        quiz_id = request.query_params.get('quiz_id')
+        result_id = request.query_params.get('result_id')
         file_type = request.query_params.get('file_type')
         
-        if quiz_id is None:
-            return Response({"error": "quiz_id is required"}, status=400)
+        if result_id is None:
+            return Response({"error": "result_id is required"}, status=400)
         
         try:
             file_type = FileType(file_type)
         except ValueError:
             return Response({"error": "Unsupported type."}, status=400)
         
-        quiz_result = QuizResult.objects.filter(quiz__id=quiz_id, user=user).latest('created_at')
+        quiz_result = QuizResult.objects.filter(id=result_id, user=user).latest('created_at')
         
         if not quiz_result:
             return Response({"detail": "Result not found."}, status=404)
