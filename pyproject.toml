@@ -19,7 +19,7 @@ indent-width = 4
 preview = true
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "W391"]
 ignore = []
 fixable = ["ALL"]
 unfixable = []

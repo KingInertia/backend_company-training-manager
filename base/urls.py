@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/v1/auth/', include('djoser.urls')),
     path('api/v1/', include('apps.companies.urls')),
     path('api/v1/', include('apps.quizzes.urls')),
+    path('api/v1/', include('apps.notifications.urls')),
 
     path('api/v1/auth/jwt/create/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
