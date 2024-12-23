@@ -2,6 +2,7 @@ from django.db.models import Q
 from rest_framework import serializers
 
 from apps.companies.models import CompanyMember
+from apps.notifications.utils import send_notifications
 
 from .models import Question, Quiz, QuizResult, UserQuizSession
 
@@ -61,7 +62,9 @@ class QuizSerializer(serializers.ModelSerializer):
             questions.append(question)
 
         Question.objects.bulk_create(questions)
-    
+        
+        send_notifications(company, quiz.title, quiz.company.name)
+        
         return quiz
 
     def update(self, instance, validated_data):

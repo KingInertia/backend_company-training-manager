@@ -39,6 +39,7 @@ AUTH_USER_MODEL = 'users.User'
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,10 +52,12 @@ INSTALLED_APPS = [
     'djoser',
     'corsheaders',
     'import_export',
+    'channels',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
     'apps.companies.apps.CompaniesConfig',
-    'apps.quizzes.apps.QuizzesConfig'
+    'apps.quizzes.apps.QuizzesConfig',
+    'apps.notifications.apps.NotificationsConfig'
 ]
 
 MIDDLEWARE = [
@@ -226,3 +229,12 @@ LOCALE_PATHS = [
 ]
 USE_I18N = True
 USE_L10N = True 
+
+ASGI_APPLICATION = 'base.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+
+    },
+}
