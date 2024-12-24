@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'import_export',
     'channels',
+    'django_celery_results',
+    'django_celery_beat',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
     'apps.companies.apps.CompaniesConfig',
@@ -238,3 +240,9 @@ CHANNEL_LAYERS = {
 
     },
 }
+
+CELERY_BROKER_URL = os.getenv("REDIS_HOST")
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TIMEZONE = 'Europe/Kiev'

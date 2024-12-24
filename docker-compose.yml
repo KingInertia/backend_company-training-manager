@@ -12,11 +12,35 @@ services:
     networks:
       - my-network
 
-  test:
-    build: ./
-    command: python manage.py test
+  celery:
+    build:
+      context: ./
+    command: celery -A base worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - django_app
     networks:
       - my-network
+
+  celerybeat:
+    build:
+      context: ./
+    command: celery -A base beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - django_app
+    networks:
+      - my-network
+
+  # test:
+  #   build: ./
+  #   command: python manage.py test
+  #   networks:
+  #     - my-network
 
   postgres-db:
     image: postgres:latest
