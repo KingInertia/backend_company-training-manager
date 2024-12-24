@@ -36,11 +36,11 @@ services:
     networks:
       - my-network
 
-  # test:
-  #   build: ./
-  #   command: python manage.py test
-  #   networks:
-  #     - my-network
+  test:
+    build: ./
+    command: python manage.py test
+    networks:
+      - my-network
 
   postgres-db:
     image: postgres:latest
