@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -53,6 +54,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'import_export',
     'channels',
+    'django_celery_results',
+    'django_celery_beat',
     'apps.health_check.apps.HealthCheckConfig',
     'apps.users.apps.UsersConfig',
     'apps.companies.apps.CompaniesConfig',
@@ -236,5 +239,18 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
 
+    },
+}
+
+CELERY_BROKER_URL = os.getenv("REDIS_HOST")
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TIMEZONE = 'Europe/Kiev'
+CELERY_BEAT_SCHEDULE = {
+    'send_quiz_reminders': {
+        'task': 'base.tasks.send_quiz_reminders',
+         'schedule': crontab(minute=0, hour=0),
+        
     },
 }

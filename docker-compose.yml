@@ -12,6 +12,30 @@ services:
     networks:
       - my-network
 
+  celery:
+    build:
+      context: ./
+    command: celery -A base worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - django_app
+    networks:
+      - my-network
+
+  celerybeat:
+    build:
+      context: ./
+    command: celery -A base beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - django_app
+    networks:
+      - my-network
+
   test:
     build: ./
     command: python manage.py test
