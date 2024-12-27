@@ -33,6 +33,7 @@ services:
     depends_on:
       - redis
       - django_app
+      - celery
     networks:
       - my-network
 
