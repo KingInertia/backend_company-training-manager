@@ -109,13 +109,8 @@ jobs:
             cd /home/ubuntu/back_django/back_meduzzen_intership
             sudo systemctl stop docker-compose-app.service
             sudo docker compose down
-            eval "$(ssh-agent -s)"
             echo $SSH_AUTH_SOCK
-            cd /home/ubuntu/back_django
-            ls
-            ssh-add /key_for_bos
-            cd /home/ubuntu/back_django/back_meduzzen_intership
-            git pull origin BE-20-update-github-actions
+            GIT_SSH_COMMAND="ssh -i /home/ubuntu/back_django/key_for_bos" git pull origin BE-20-update-github-actions
             sudo docker compose up --build -d
             sudo systemctl start docker-compose-app.service
           EOF
