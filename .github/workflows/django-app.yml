@@ -88,6 +88,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: test
+    if: github.event.pull_request.merged == true
 
     steps:
       - name: Checkout code
@@ -110,7 +111,7 @@ jobs:
             sudo systemctl stop docker-compose-app.service
             sudo docker compose down
             echo $SSH_AUTH_SOCK
-            GIT_SSH_COMMAND="ssh -i /home/ubuntu/back_django/key_for_bos" git pull --no-rebase origin BE-20-update-github-actions
+            GIT_SSH_COMMAND="ssh -i /home/ubuntu/back_django/key_for_bos" git pull --no-rebase origin develop
             sudo docker compose up --build -d
             sudo systemctl start docker-compose-app.service
           EOF
