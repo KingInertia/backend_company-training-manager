@@ -108,10 +108,10 @@ jobs:
           ssh -i ~/.ssh/key ubuntu@${{ secrets.EC2_PUBLIC_DNS }} <<EOF
             cd /home/ubuntu/back_django/back_meduzzen_intership
             sudo systemctl stop docker-compose-app.service
-            sudo docker-compose down
+            sudo docker compose down
             eval "$(ssh-agent -s)"
-            ssh-add ~/back_django/key_for_bos
+            ssh-add /home/ubuntu/back_django/key_for_bos
             git pull origin BE-20-update-github-actions
-            sudo docker-compose up --build -d
-            sudo systemctl restart docker-compose-app.service
+            sudo docker compose up --build -d
+            sudo systemctl start docker-compose-app.service
           EOF
