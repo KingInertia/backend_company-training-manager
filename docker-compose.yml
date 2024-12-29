@@ -11,6 +11,7 @@ services:
       - .:/app
     networks:
       - my-network
+    restart: always
 
   celery:
     build:
@@ -23,6 +24,7 @@ services:
       - django_app
     networks:
       - my-network
+    restart: always
 
   celerybeat:
     build:
@@ -36,26 +38,22 @@ services:
       - celery
     networks:
       - my-network
-
-  test:
-    build: ./
-    command: python manage.py test
-    networks:
-      - my-network
+    restart: always
 
   postgres-db:
     image: postgres:latest
     container_name: postgres
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: oracle
+      POSTGRES_DB: meduzzen_intership_db
     ports:
       - '5432:5432'
     volumes:
       - db_data:/var/lib/postgresql/data
     networks:
       - my-network
+    restart: always
 
   redis:
     image: redis:latest
@@ -65,6 +63,7 @@ services:
       - redis_data:/data
     networks:
       - my-network
+    restart: always
 
 volumes:
   db_data:
