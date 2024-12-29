@@ -11,6 +11,7 @@ services:
       - .:/app
     networks:
       - my-network
+    restart: always
 
   celery:
     build:
@@ -23,6 +24,7 @@ services:
       - django_app
     networks:
       - my-network
+    restart: always
 
   celerybeat:
     build:
@@ -33,14 +35,10 @@ services:
     depends_on:
       - redis
       - django_app
+      - celery
     networks:
       - my-network
-
-  test:
-    build: ./
-    command: python manage.py test
-    networks:
-      - my-network
+    restart: always
 
   postgres-db:
     image: postgres:latest
@@ -55,6 +53,7 @@ services:
       - db_data:/var/lib/postgresql/data
     networks:
       - my-network
+    restart: always
 
   redis:
     image: redis:latest
@@ -64,6 +63,7 @@ services:
       - redis_data:/data
     networks:
       - my-network
+    restart: always
 
 volumes:
   db_data:

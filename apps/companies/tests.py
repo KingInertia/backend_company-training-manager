@@ -628,11 +628,12 @@ class CompanyMemberViewSetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)  
 
-    def test_list_members_permission_denied(self):
+    def test_list_members_empty(self):
         self.client.force_authenticate(user=self.other_user)
         url = '/api/v1/company-members/members/?company=' + str(self.company2.id)
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
         
     def test_create_company_member_not_allowed(self):
         self.client.force_authenticate(user=self.owner)
