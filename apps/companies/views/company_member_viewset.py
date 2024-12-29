@@ -139,7 +139,7 @@ class CompanyMemberViewSet(viewsets.ModelViewSet):
         ).select_related('company').values('company__visibility', 'role').first()
 
         if member_info is None:
-            return Response({"detail": "Company not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response([], status=status.HTTP_200_OK)
 
         visibility = member_info .get('company__visibility')
         role = member_info .get('role')

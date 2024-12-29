@@ -9,4 +9,4 @@ COPY . /code/
 COPY .env.docker /code/.env
 
 RUN chmod +x /code/start.sh
-CMD ["sh", "/code/start.sh"]
+CMD ["sh", "-c", "python manage.py migrate && sh /code/start.sh"]
