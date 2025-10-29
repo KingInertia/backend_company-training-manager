@@ -1,0 +1,32 @@
+[tool.ruff]
+exclude = [
+    ".git",
+    ".vscode",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    "site-packages",
+    "migrations"
+]
+
+target-version = "py312"
+line-length = 120
+indent-width = 4
+preview = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W391"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false

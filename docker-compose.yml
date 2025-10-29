@@ -1,0 +1,73 @@
+services:
+  django_app:
+    depends_on:
+      - postgres-db
+      - redis
+    build:
+      context: ./
+    ports:
+      - '8000:8000'
+    volumes:
+      - .:/app
+    networks:
+      - my-network
+    restart: always
+
+  celery:
+    build:
+      context: ./
+    command: celery -A base worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - django_app
+    networks:
+      - my-network
+    restart: always
+
+  celerybeat:
+    build:
+      context: ./
+    command: celery -A base beat --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - django_app
+      - celery
+    networks:
+      - my-network
+    restart: always
+
+  postgres-db:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '5432:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - my-network
+    restart: always
+
+  redis:
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - my-network
+    restart: always
+
+volumes:
+  db_data:
+  redis_data:
+
+networks:
+  my-network:
